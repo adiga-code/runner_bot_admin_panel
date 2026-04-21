@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+// In dev: BASE_URL = '/' → baseURL = '/api'
+// In prod: BASE_URL = '/runneradmin/' → baseURL = '/runneradmin/api'
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.BASE_URL + 'api',
 })
 
 api.interceptors.request.use((config) => {
@@ -17,7 +19,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      window.location.href = import.meta.env.BASE_URL + 'login'
     }
     return Promise.reject(error)
   }
