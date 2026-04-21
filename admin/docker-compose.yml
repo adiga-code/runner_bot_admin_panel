@@ -6,13 +6,11 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
-      DATABASE_URL: sqlite+aiosqlite:///./data/mock.db
+      DATABASE_URL: postgresql+asyncpg://isjdiokkdm:2gKL3CDyGnEdMV04uRu1@5.42.96.211:5435/run
       SECRET_KEY: change-me-in-production
       ADMIN_EMAIL: admin@example.com
       ADMIN_PASSWORD: adminpassword
       JWT_EXPIRE_MINUTES: "1440"
-    volumes:
-      - db_data:/app/data
     expose:
       - "8000"
 
@@ -22,9 +20,6 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - backend
-
-volumes:
-  db_data:
