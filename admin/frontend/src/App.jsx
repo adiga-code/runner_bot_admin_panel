@@ -16,7 +16,7 @@ function PrivateRoute({ children }) {
 export default function App() {
   return (
     <ToastProvider>
-      <BrowserRouter basename={import.meta.env.BASE_URL}>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route
