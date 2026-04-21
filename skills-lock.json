@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "anthropics/claude-plugins-official",
+      "sourceType": "github",
+      "computedHash": "739fdfda7f74445ad6b300d6eeba31a82aed276664242580206cd564e6fee3f6"
+    }
+  }
+}
