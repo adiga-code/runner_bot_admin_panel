@@ -402,6 +402,165 @@ function ProgressTab({ logs, onReload }) {
   )
 }
 
+// ─── Testing Tab ─────────────────────────────────────────────────────────────
+function TestingTab({ userId, onReload }) {
+  const toast = useToast()
+  const [targetDay, setTargetDay]       = useState(1)
+  const [deleteFromDay, setDeleteFromDay] = useState(1)
+  const [saving, setSaving]             = useState(false)
+
+  const [setDayModal, setSetDayModal]         = useState(false)
+  const [deleteLogsModal, setDeleteLogsModal] = useState(false)
+  const [resetModal, setResetModal]           = useState(false)
+  const [onboardingModal, setOnboardingModal] = useState(false)
+
+  async function doSetDay() {
+    setSaving(true)
+    try {
+      await api.post(`/users/${userId}/set-day`, { day: targetDay })
+      toast(`Пользователь переведён на день ${targetDay}`)
+      setSetDayModal(false)
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
+  async function doDeleteLogs() {
+    setSaving(true)
+    try {
+      await api.delete(`/users/${userId}/logs?from_day=${deleteFromDay}`)
+      toast(`Логи с дня ${deleteFromDay} удалены`)
+      setDeleteLogsModal(false)
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
+  async function doReset() {
+    setSaving(true)
+    try {
+      await api.post(`/users/${userId}/reset`)
+      toast('Прогресс сброшен до дня 1')
+      setResetModal(false)
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
+  async function doResetOnboarding() {
+    setSaving(true)
+    try {
+      await api.post(`/users/${userId}/reset-onboarding`)
+      toast('Онбординг и прогресс сброшены')
+      setOnboardingModal(false)
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 mb-6 flex items-center gap-3">
+        <span className="text-amber-500 text-base">⚠️</span>
+        <p className="text-sm text-amber-700">Только для тестирования. Действия необратимы — реальные данные будут удалены.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        {/* Set day */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
+          <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number" min={1} max={35} value={targetDay}
+              onChange={e => setTargetDay(Math.max(1, Math.min(35, +e.target.value)))}
+              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <span className="text-sm text-gray-500">из 28</span>
+            <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
+          </div>
+        </div>
+
+        {/* Delete logs from day */}
+        <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
+          <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number" min={1} max={35} value={deleteFromDay}
+              onChange={e => setDeleteFromDay(Math.max(1, Math.min(35, +e.target.value)))}
+              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <span className="text-sm text-gray-500">и далее</span>
+            <button
+              onClick={() => setDeleteLogsModal(true)}
+              className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+            >
+              Удалить
+            </button>
+          </div>
+        </div>
+
+        {/* Full reset */}
+        <div className="bg-white border border-red-100 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Полный сброс прогресса</h3>
+          <p className="text-xs text-gray-500 mb-4">Удаляет все логи, устанавливает старт = сегодня (день 1), статус = active, повторы = 0. Анкета сохраняется.</p>
+          <button
+            onClick={() => setResetModal(true)}
+            className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+          >
+            Сбросить прогресс
+          </button>
+        </div>
+
+        {/* Reset onboarding */}
+        <div className="bg-white border border-red-100 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Сбросить онбординг</h3>
+          <p className="text-xs text-gray-500 mb-4">Удаляет все логи и анкету. Статус → pending, уровень и дата старта очищаются. Бот запустит онбординг заново.</p>
+          <button
+            onClick={() => setOnboardingModal(true)}
+            className="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+          >
+            Сбросить онбординг
+          </button>
+        </div>
+      </div>
+
+      <Modal
+        isOpen={setDayModal} onClose={() => setSetDayModal(false)}
+        title={`Перейти на день ${targetDay}?`}
+        footer={<><BtnSecondary onClick={() => setSetDayModal(false)}>Отмена</BtnSecondary><BtnPrimary onClick={doSetDay} disabled={saving}>Применить</BtnPrimary></>}
+      >
+        <p className="text-sm text-gray-600">Дата старта будет пересчитана так, чтобы сегодня = день <b>{targetDay}</b>. Существующие логи не удаляются.</p>
+      </Modal>
+
+      <Modal
+        isOpen={deleteLogsModal} onClose={() => setDeleteLogsModal(false)}
+        title={`Удалить логи с дня ${deleteFromDay}?`}
+        footer={<><BtnSecondary onClick={() => setDeleteLogsModal(false)}>Отмена</BtnSecondary><button onClick={doDeleteLogs} disabled={saving} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-60">Удалить</button></>}
+      >
+        <p className="text-sm text-gray-600">Все session_logs начиная с дня <b>{deleteFromDay}</b> будут безвозвратно удалены.</p>
+      </Modal>
+
+      <Modal
+        isOpen={resetModal} onClose={() => setResetModal(false)}
+        title="Полный сброс прогресса?"
+        footer={<><BtnSecondary onClick={() => setResetModal(false)}>Отмена</BtnSecondary><button onClick={doReset} disabled={saving} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">Сбросить</button></>}
+      >
+        <p className="text-sm text-gray-600">Все логи будут удалены. Старт = сегодня, день 1. Анкета и уровень сохраняются.</p>
+      </Modal>
+
+      <Modal
+        isOpen={onboardingModal} onClose={() => setOnboardingModal(false)}
+        title="Сбросить онбординг?"
+        footer={<><BtnSecondary onClick={() => setOnboardingModal(false)}>Отмена</BtnSecondary><button onClick={doResetOnboarding} disabled={saving} className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60">Сбросить всё</button></>}
+      >
+        <p className="text-sm text-gray-600">Все логи и анкета будут удалены. Уровень и дата старта очищаются. Пользователь снова пройдёт онбординг с нуля.</p>
+      </Modal>
+    </div>
+  )
+}
+
 // ─── Checkins Tab ─────────────────────────────────────────────────────────────
 function CheckinsTab({ logs }) {
   const [open, setOpen] = useState(null)
@@ -591,7 +750,7 @@ export default function UserDetail() {
 
       {/* Tabs */}
       <div className="flex gap-0 mb-6 border-b border-gray-200">
-        {[['profile','Профиль'],['progress','Прогресс'],['checkins','Чекины']].map(([key, label]) => (
+        {[['profile','Профиль'],['progress','Прогресс'],['checkins','Чекины'],['testing','🧪 Тест']].map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -609,6 +768,7 @@ export default function UserDetail() {
       {tab === 'profile'   && <ProfileTab user={user} />}
       {tab === 'progress'  && <ProgressTab logs={logs} onReload={load} />}
       {tab === 'checkins'  && <CheckinsTab logs={logs} />}
+      {tab === 'testing'   && <TestingTab userId={id} onReload={load} />}
 
       {/* Level modal */}
       <Modal

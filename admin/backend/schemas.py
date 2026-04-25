@@ -98,6 +98,10 @@ class UpdateStatusRequest(BaseModel):
     status: str
 
 
+class SetDayRequest(BaseModel):
+    day: int
+
+
 class WorkoutInfo(BaseModel):
     id: int
     level: Optional[int] = None
