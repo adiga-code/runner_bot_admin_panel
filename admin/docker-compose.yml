@@ -18,6 +18,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/runneradmintest/}
     restart: unless-stopped
     ports:
       - "8082:80"
