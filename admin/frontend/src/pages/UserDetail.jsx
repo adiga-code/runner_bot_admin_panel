@@ -148,8 +148,18 @@ function ProfileTab({ user }) {
             <span className="text-sm text-gray-500 w-44 shrink-0">Статус</span>
             {user.status ? <Badge value={user.status} label={STATUS_LABELS[user.status] || user.status} /> : <span className="text-sm text-gray-900">—</span>}
           </div>
-          <InfoRow label="Дата старта" value={formatDate(user.program_start_date)} />
-          <InfoRow label="Повторов недели" value={user.week_repeat_count} />
+          {user.current_period ? (
+            <>
+              <InfoRow label="Текущий период" value={PERIOD_LABELS[user.current_period] || user.current_period} />
+              <InfoRow label="Неделя программы" value={user.program_week_number} />
+              <InfoRow label="Объём (план)" value={user.weekly_target_minutes ? `${user.weekly_target_minutes} мин/нед` : null} />
+            </>
+          ) : (
+            <>
+              <InfoRow label="Дата старта" value={formatDate(user.program_start_date)} />
+              <InfoRow label="Повторов недели" value={user.week_repeat_count} />
+            </>
+          )}
           <InfoRow label="Силовые" value={
             user.strength_format === 'gym' ? 'Зал' :
             user.strength_format === 'home' ? 'Дома' : null
@@ -469,7 +479,7 @@ function ProgressTab({ logs = [], onReload }) {
 }
 
 // ─── Testing Tab ─────────────────────────────────────────────────────────────
-function TestingTab({ userId, logs = [], onReload }) {
+function TestingTab({ userId, logs = [], onReload, isNewLogic }) {
   const toast = useToast()
   const [targetDay, setTargetDay]             = useState(1)
   const [deleteFromDay, setDeleteFromDay]     = useState(1)
@@ -603,40 +613,44 @@ function TestingTab({ userId, logs = [], onReload }) {
           </div>
         </div>
 
-        {/* Set day */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
-          <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number" min={1} max={35} value={targetDay}
-              onChange={e => setTargetDay(Math.max(1, Math.min(35, +e.target.value)))}
-              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
-            <span className="text-sm text-gray-500">из 28</span>
-            <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
+        {/* Set day — old logic only */}
+        {!isNewLogic && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
+            <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={1} max={35} value={targetDay}
+                onChange={e => setTargetDay(Math.max(1, Math.min(35, +e.target.value)))}
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">из 28</span>
+              <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Delete logs from day */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
-          <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number" min={1} max={35} value={deleteFromDay}
-              onChange={e => setDeleteFromDay(Math.max(1, Math.min(35, +e.target.value)))}
-              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
-            <span className="text-sm text-gray-500">и далее</span>
-            <button
-              onClick={() => setDeleteLogsModal(true)}
-              className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
-            >
-              Удалить
-            </button>
+        {/* Delete logs from day — old logic only */}
+        {!isNewLogic && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
+            <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={1} max={35} value={deleteFromDay}
+                onChange={e => setDeleteFromDay(Math.max(1, Math.min(35, +e.target.value)))}
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">и далее</span>
+              <button
+                onClick={() => setDeleteLogsModal(true)}
+                className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+              >
+                Удалить
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Full reset */}
         <div className="bg-white border border-red-100 rounded-xl p-5">
@@ -958,7 +972,7 @@ export default function UserDetail() {
         </div>
         <div className="flex gap-2">
           <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
-          <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>
+          {!user.current_period && <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>}
           <button
             onClick={() => setPauseModal(true)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -992,7 +1006,7 @@ export default function UserDetail() {
       {tab === 'profile'   && <ProfileTab user={user} />}
       {tab === 'progress'  && <ProgressTab logs={logs} onReload={load} />}
       {tab === 'checkins'  && <CheckinsTab logs={logs} />}
-      {tab === 'testing'   && <TestingTab userId={id} logs={logs} onReload={load} />}
+      {tab === 'testing'   && <TestingTab userId={id} logs={logs} onReload={load} isNewLogic={!!user.current_period} />}
 
       {/* Level modal */}
       <Modal
