@@ -267,7 +267,7 @@ function SectionTitle({ children }) {
 }
 
 // ─── Progress Tab ─────────────────────────────────────────────────────────────
-function ProgressTab({ logs, onReload }) {
+function ProgressTab({ logs = [], onReload }) {
   const toast = useToast()
   const done    = logs.filter(l => l.completion_status === 'done').length
   const skipped = logs.filter(l => l.completion_status === 'skipped').length
@@ -469,7 +469,7 @@ function ProgressTab({ logs, onReload }) {
 }
 
 // ─── Testing Tab ─────────────────────────────────────────────────────────────
-function TestingTab({ userId, logs, onReload }) {
+function TestingTab({ userId, logs = [], onReload }) {
   const toast = useToast()
   const [targetDay, setTargetDay]             = useState(1)
   const [deleteFromDay, setDeleteFromDay]     = useState(1)
@@ -779,7 +779,7 @@ function TestingTab({ userId, logs, onReload }) {
 }
 
 // ─── Checkins Tab ─────────────────────────────────────────────────────────────
-function CheckinsTab({ logs }) {
+function CheckinsTab({ logs = [] }) {
   const [open, setOpen] = useState(null)
 
   return (
@@ -873,7 +873,7 @@ export default function UserDetail() {
         api.get(`/users/${id}/logs`),
       ])
       setUser(uRes.data)
-      setLogs(lRes.data)
+      setLogs(Array.isArray(lRes.data) ? lRes.data : [])
       setNewLevel(uRes.data.level || 1)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
