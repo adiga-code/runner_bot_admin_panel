@@ -187,6 +187,8 @@ async def list_users(
             week_repeat_count=u.week_repeat_count,
             created_at=u.created_at,
             current_day=compute_current_day(u.program_start_date),
+            current_period=u.current_period,
+            program_week_number=u.program_week_number,
         ))
 
     return UserListResponse(items=items, total=total, page=page, pages=pages)

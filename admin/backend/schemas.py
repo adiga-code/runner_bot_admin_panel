@@ -24,6 +24,8 @@ class UserListItem(BaseModel):
     week_repeat_count: Optional[int] = None
     created_at: Optional[datetime] = None
     current_day: Optional[int] = None
+    current_period: Optional[str] = None
+    program_week_number: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
