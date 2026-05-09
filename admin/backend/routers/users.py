@@ -390,3 +390,79 @@ async def recalc_level_and_save(
     user.current_period = calc["initial_period"]
     await db.commit()
     return calc
+
+
+@router.post("/{user_id}/activate")
+async def activate_user(
+    user_id: int,
+    start_today: bool = Query(True),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if user.level is None:
+        raise HTTPException(status_code=400, detail="Уровень пользователя не назначен")
+
+    start_date = date.today() if start_today else date.today() + timedelta(days=1)
+    user.status = "active"
+    user.program_start_date = start_date
+    user.program_week_number = 1
+    await db.flush()
+
+    # New-logic: level 1-3 with current_period set → create WeekPlan + DayPlan
+    if user.level <= 3 and user.current_period is not None:
+        today = date.today()
+        monday = today - timedelta(days=today.weekday())
+        week_start = monday if monday >= today else monday + timedelta(weeks=1)
+
+        available = parse_available_weekdays(user.available_weekdays)
+        blueprint = build_week_plan(
+            user=user,
+            week_number=1,
+            period=user.current_period,
+            target_minutes=user.weekly_target_minutes or 60,
+            is_recovery_week=False,
+            available_weekdays=available,
+        )
+
+        week_plan = models.WeekPlan(
+            user_id=user.telegram_id,
+            week_number=1,
+            cycle_number=user.cycle_number or 1,
+            period=user.current_period,
+            period_week_number=1,
+            start_date=week_start,
+            end_date=week_start + timedelta(days=6),
+            weekly_target_minutes=user.weekly_target_minutes or 60,
+            is_recovery_week=False,
+            is_rollback_week=False,
+        )
+        db.add(week_plan)
+        await db.flush()
+
+        for slot in blueprint.days:
+            db.add(models.DayPlan(
+                week_plan_id=week_plan.id,
+                day_of_week=slot.day_of_week,
+                day_type=slot.day_type,
+                run_subtype=slot.run_subtype,
+                planned_minutes=slot.planned_minutes,
+                intensity=slot.intensity,
+                is_key=slot.is_key,
+            ))
+
+    elif start_today:
+        # Old-logic: create Day 1 SessionLog
+        db.add(models.SessionLog(
+            user_id=user.telegram_id,
+            date=date.today(),
+            day_index=1,
+        ))
+
+    await db.commit()
+    return {"ok": True}
