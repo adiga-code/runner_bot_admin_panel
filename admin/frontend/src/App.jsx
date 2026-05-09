@@ -6,6 +6,7 @@ import Users from './pages/Users'
 import UserDetail from './pages/UserDetail'
 import Workouts from './pages/Workouts'
 import Analytics from './pages/Analytics'
+import Approvals from './pages/Approvals'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token')
@@ -27,7 +28,8 @@ export default function App() {
               </PrivateRoute>
             }
           >
-            <Route index element={<Navigate to="/users" replace />} />
+            <Route index element={<Navigate to="/approvals" replace />} />
+            <Route path="approvals" element={<Approvals />} />
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetail />} />
             <Route path="workouts" element={<Workouts />} />

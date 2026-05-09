@@ -1,14 +1,23 @@
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Activity, Users, BarChart2, Dumbbell, LogOut } from 'lucide-react'
-
-const navItems = [
-  { to: '/users', icon: Users, label: 'Пользователи' },
-  { to: '/analytics', icon: BarChart2, label: 'Аналитика' },
-  { to: '/workouts', icon: Dumbbell, label: 'Тренировки' },
-]
+import { Activity, Users, BarChart2, Dumbbell, LogOut, CheckSquare } from 'lucide-react'
+import api from '../api/axios'
 
 export default function Sidebar() {
   const navigate = useNavigate()
+  const [pendingCount, setPendingCount] = useState(0)
+
+  function fetchPending() {
+    api.get('/pending-checkins')
+      .then(r => setPendingCount(Array.isArray(r.data) ? r.data.length : 0))
+      .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchPending()
+    const interval = setInterval(fetchPending, 60_000)
+    return () => clearInterval(interval)
+  }, [])
 
   function handleLogout() {
     localStorage.removeItem('token')
@@ -25,15 +34,34 @@ export default function Sidebar() {
       </div>
 
       <nav className="px-3 mt-4 flex flex-col gap-1 flex-1">
-        {navItems.map(({ to, icon: Icon, label }) => (
+        <NavLink
+          to="/approvals"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              isActive ? 'bg-violet-50 text-violet-600' : 'text-gray-600 hover:bg-gray-100'
+            }`
+          }
+        >
+          <CheckSquare size={17} />
+          <span className="flex-1">Одобрение</span>
+          {pendingCount > 0 && (
+            <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+              {pendingCount > 9 ? '9+' : pendingCount}
+            </span>
+          )}
+        </NavLink>
+
+        {[
+          { to: '/users',     icon: Users,    label: 'Пользователи' },
+          { to: '/analytics', icon: BarChart2, label: 'Аналитика' },
+          { to: '/workouts',  icon: Dumbbell,  label: 'Тренировки' },
+        ].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-violet-50 text-violet-600'
-                  : 'text-gray-600 hover:bg-gray-100'
+                isActive ? 'bg-violet-50 text-violet-600' : 'text-gray-600 hover:bg-gray-100'
               }`
             }
           >

@@ -10,6 +10,7 @@ from routers.users import router as users_router
 from routers.logs import router as logs_router
 from routers.workouts import router as workouts_router
 from routers.analytics import router as analytics_router
+from routers.approvals import router as approvals_router
 
 app = FastAPI(title="28 Days Admin API", version="1.0.0")
 
@@ -32,6 +33,7 @@ app.include_router(users_router, prefix="/api/users", tags=["users"])
 app.include_router(logs_router, prefix="/api", tags=["logs"])
 app.include_router(workouts_router, prefix="/api/workouts", tags=["workouts"])
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
+app.include_router(approvals_router, prefix="/api", tags=["approvals"])
 
 
 @app.get("/api/health")
