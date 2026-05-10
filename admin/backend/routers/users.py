@@ -349,6 +349,33 @@ async def delete_logs_from_day(
     return {"ok": True}
 
 
+@router.post("/{user_id}/shift-week")
+async def shift_week_plan(
+    user_id: int,
+    days: int = Query(..., description="Сдвинуть даты WeekPlan назад на N дней (отрицательное число)"),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Сдвигает даты текущего WeekPlan и DayPlan для тестирования новой системы."""
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.user_id == user_id)
+        .order_by(models.WeekPlan.start_date.desc())
+        .limit(1)
+    )
+    week_plan = result.scalar_one_or_none()
+    if not week_plan:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    delta = timedelta(days=days)
+    week_plan.start_date = week_plan.start_date + delta
+    week_plan.end_date = week_plan.end_date + delta
+    await db.commit()
+    return {"ok": True, "new_start": str(week_plan.start_date), "new_end": str(week_plan.end_date)}
+
+
 @router.post("/{user_id}/reset")
 async def reset_user(
     user_id: int,
@@ -447,6 +474,7 @@ async def recalc_level_and_save(
 async def activate_user(
     user_id: int,
     start_today: bool = Query(True),
+    start_date_override: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
@@ -459,7 +487,10 @@ async def activate_user(
     if user.level is None:
         raise HTTPException(status_code=400, detail="Уровень пользователя не назначен")
 
-    start_date = date.today() if start_today else date.today() + timedelta(days=1)
+    if start_date_override:
+        start_date = start_date_override
+    else:
+        start_date = date.today() if start_today else date.today() + timedelta(days=1)
     user.status = "active"
     user.program_start_date = start_date
     user.program_week_number = 1
@@ -467,9 +498,9 @@ async def activate_user(
 
     # New-logic: level 1-3 with current_period set → create WeekPlan + DayPlan
     if user.level <= 3 and user.current_period is not None:
-        today = date.today()
-        monday = today - timedelta(days=today.weekday())
-        week_start = monday if monday >= today else monday + timedelta(weeks=1)
+        # Week always starts on Monday; find the Monday of or after start_date
+        monday = start_date - timedelta(days=start_date.weekday())
+        week_start = monday if monday >= start_date else monday + timedelta(weeks=1)
 
         available = parse_available_weekdays(user.available_weekdays)
         blueprint = build_week_plan(
