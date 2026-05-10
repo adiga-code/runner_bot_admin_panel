@@ -377,6 +377,121 @@ async def shift_week_plan(
     return {"ok": True, "new_start": str(week_plan.start_date), "new_end": str(week_plan.end_date)}
 
 
+@router.delete("/week-plans/{week_plan_id}")
+async def delete_week_plan(
+    week_plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Удаляет WeekPlan и его DayPlan'ы. Session logs не удаляются — только обнуляется ссылка."""
+    from sqlalchemy.orm import selectinload
+
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.id == week_plan_id)
+    )
+    wp = result.scalar_one_or_none()
+    if not wp:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    # Обнуляем session_log_id у day_plans чтобы снять FK
+    for dp in wp.days:
+        if dp.session_log_id is not None:
+            dp.session_log_id = None
+    await db.flush()
+
+    # Удаляем day_plans
+    await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
+    await db.delete(wp)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/week-plans/{week_plan_id}/recalculate")
+async def recalculate_week_plan(
+    week_plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Удаляет текущий WeekPlan и пересоздаёт его с теми же датами по актуальным настройкам пользователя."""
+    from sqlalchemy.orm import selectinload
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.id == week_plan_id)
+    )
+    wp = result.scalar_one_or_none()
+    if not wp:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    user_result = await db.execute(select(models.User).where(models.User.telegram_id == wp.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Сохраняем параметры плана
+    start_date = wp.start_date
+    week_number = wp.week_number
+    cycle_number = wp.cycle_number
+    period = wp.period
+    period_week_number = wp.period_week_number
+    target_minutes = wp.weekly_target_minutes
+    is_recovery = wp.is_recovery_week
+    is_rollback = wp.is_rollback_week
+
+    # Удаляем старый план
+    for dp in wp.days:
+        if dp.session_log_id is not None:
+            dp.session_log_id = None
+    await db.flush()
+    await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
+    await db.delete(wp)
+    await db.flush()
+
+    # Пересчитываем
+    available = parse_available_weekdays(user.available_weekdays)
+    blueprint = build_week_plan(
+        user=user,
+        week_number=week_number,
+        period=period,
+        target_minutes=target_minutes,
+        is_recovery_week=is_recovery,
+        available_weekdays=available,
+    )
+
+    new_wp = models.WeekPlan(
+        user_id=user.telegram_id,
+        week_number=week_number,
+        cycle_number=cycle_number,
+        period=period,
+        period_week_number=period_week_number,
+        start_date=start_date,
+        end_date=start_date + timedelta(days=6),
+        weekly_target_minutes=target_minutes,
+        is_recovery_week=is_recovery,
+        is_rollback_week=is_rollback,
+    )
+    db.add(new_wp)
+    await db.flush()
+
+    for slot in blueprint.days:
+        db.add(models.DayPlan(
+            week_plan_id=new_wp.id,
+            day_of_week=slot.day_of_week,
+            day_type=slot.day_type,
+            run_subtype=slot.run_subtype,
+            planned_minutes=slot.planned_minutes,
+            intensity=slot.intensity,
+            is_key=slot.is_key,
+        ))
+
+    await db.commit()
+    return {"ok": True, "week_plan_id": new_wp.id}
+
+
 @router.post("/{user_id}/reset")
 async def reset_user(
     user_id: int,
