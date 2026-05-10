@@ -20,7 +20,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_BASE_PATH: ${VITE_BASE_PATH:-/runneradmintest/}
+        VITE_BASE_PATH: ${VITE_BASE_PATH:-/runneradmin/}
     restart: unless-stopped
     ports:
       - "8082:80"
