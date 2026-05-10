@@ -207,6 +207,57 @@ async def get_user(
     return UserDetail.model_validate(user)
 
 
+@router.get("/{user_id}/week-plans")
+async def get_week_plans(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.WeekPlan)
+        .where(models.WeekPlan.user_id == user_id)
+        .options(selectinload(models.WeekPlan.days))
+        .order_by(models.WeekPlan.start_date.desc())
+    )
+    week_plans = result.scalars().all()
+    return [
+        {
+            "id": wp.id,
+            "week_number": wp.week_number,
+            "cycle_number": wp.cycle_number,
+            "period": wp.period,
+            "period_week_number": wp.period_week_number,
+            "start_date": str(wp.start_date) if wp.start_date else None,
+            "end_date": str(wp.end_date) if wp.end_date else None,
+            "weekly_target_minutes": wp.weekly_target_minutes,
+            "is_recovery_week": wp.is_recovery_week,
+            "is_rollback_week": wp.is_rollback_week,
+            "actual_running_minutes": wp.actual_running_minutes,
+            "completion_rate": wp.completion_rate,
+            "closed_at": wp.closed_at.isoformat() if wp.closed_at else None,
+            "days": sorted(
+                [
+                    {
+                        "id": d.id,
+                        "day_of_week": d.day_of_week,
+                        "day_type": d.day_type,
+                        "run_subtype": d.run_subtype,
+                        "planned_minutes": d.planned_minutes,
+                        "intensity": d.intensity,
+                        "is_key": d.is_key,
+                        "is_key_completed": d.is_key_completed,
+                        "session_log_id": d.session_log_id,
+                    }
+                    for d in wp.days
+                ],
+                key=lambda x: x["day_of_week"] or 0,
+            ),
+        }
+        for wp in week_plans
+    ]
+
+
 @router.put("/{user_id}/level")
 async def update_level(
     user_id: int,
