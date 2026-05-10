@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, delete
+from sqlalchemy import select, func, or_, delete, update
 from datetime import date, timedelta
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel
 from dependencies import get_db, get_current_user
 from schemas import (
     UserListResponse, UserListItem, UserDetail,
@@ -427,6 +428,148 @@ async def delete_logs_from_day(
     return {"ok": True}
 
 
+@router.post("/{user_id}/shift-week")
+async def shift_week_plan(
+    user_id: int,
+    days: int = Query(..., description="Сдвинуть даты WeekPlan назад на N дней (отрицательное число)"),
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Сдвигает даты текущего WeekPlan и DayPlan для тестирования новой системы."""
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.user_id == user_id)
+        .order_by(models.WeekPlan.start_date.desc())
+        .limit(1)
+    )
+    week_plan = result.scalar_one_or_none()
+    if not week_plan:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    delta = timedelta(days=days)
+    week_plan.start_date = week_plan.start_date + delta
+    week_plan.end_date = week_plan.end_date + delta
+    await db.commit()
+    return {"ok": True, "new_start": str(week_plan.start_date), "new_end": str(week_plan.end_date)}
+
+
+@router.delete("/week-plans/{week_plan_id}")
+async def delete_week_plan(
+    week_plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Удаляет WeekPlan и его DayPlan'ы. Session logs не удаляются — только обнуляется ссылка."""
+    from sqlalchemy.orm import selectinload
+
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.id == week_plan_id)
+    )
+    wp = result.scalar_one_or_none()
+    if not wp:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    # Обнуляем session_log_id у day_plans чтобы снять FK
+    for dp in wp.days:
+        if dp.session_log_id is not None:
+            dp.session_log_id = None
+    await db.flush()
+
+    # Удаляем day_plans
+    await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
+    await db.delete(wp)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/week-plans/{week_plan_id}/recalculate")
+async def recalculate_week_plan(
+    week_plan_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Удаляет текущий WeekPlan и пересоздаёт его с теми же датами по актуальным настройкам пользователя."""
+    from sqlalchemy.orm import selectinload
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    result = await db.execute(
+        select(models.WeekPlan)
+        .options(selectinload(models.WeekPlan.days))
+        .where(models.WeekPlan.id == week_plan_id)
+    )
+    wp = result.scalar_one_or_none()
+    if not wp:
+        raise HTTPException(status_code=404, detail="WeekPlan не найден")
+
+    user_result = await db.execute(select(models.User).where(models.User.telegram_id == wp.user_id))
+    user = user_result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Сохраняем параметры плана
+    start_date = wp.start_date
+    week_number = wp.week_number
+    cycle_number = wp.cycle_number
+    period = wp.period
+    period_week_number = wp.period_week_number
+    target_minutes = wp.weekly_target_minutes
+    is_recovery = wp.is_recovery_week
+    is_rollback = wp.is_rollback_week
+
+    # Удаляем старый план
+    for dp in wp.days:
+        if dp.session_log_id is not None:
+            dp.session_log_id = None
+    await db.flush()
+    await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
+    await db.delete(wp)
+    await db.flush()
+
+    # Пересчитываем
+    available = parse_available_weekdays(user.available_weekdays)
+    blueprint = build_week_plan(
+        user=user,
+        week_number=week_number,
+        period=period,
+        target_minutes=target_minutes,
+        is_recovery_week=is_recovery,
+        available_weekdays=available,
+    )
+
+    new_wp = models.WeekPlan(
+        user_id=user.telegram_id,
+        week_number=week_number,
+        cycle_number=cycle_number,
+        period=period,
+        period_week_number=period_week_number,
+        start_date=start_date,
+        end_date=start_date + timedelta(days=6),
+        weekly_target_minutes=target_minutes,
+        is_recovery_week=is_recovery,
+        is_rollback_week=is_rollback,
+    )
+    db.add(new_wp)
+    await db.flush()
+
+    for slot in blueprint.days:
+        db.add(models.DayPlan(
+            week_plan_id=new_wp.id,
+            day_of_week=slot.day_of_week,
+            day_type=slot.day_type,
+            run_subtype=slot.run_subtype,
+            planned_minutes=slot.planned_minutes,
+            intensity=slot.intensity,
+            is_key=slot.is_key,
+        ))
+
+    await db.commit()
+    return {"ok": True, "week_plan_id": new_wp.id}
+
+
 @router.post("/{user_id}/reset")
 async def reset_user(
     user_id: int,
@@ -454,6 +597,7 @@ _ONBOARDING_FIELDS = [
     "q_pain_increases", "q_injury_history", "q_other_sports",
     "q_strength_frequency", "q_regularity", "q_strength", "q_self_level",
     "q_continuous_run_test",
+    "q_gadget", "q_gadget_types", "q_gadget_sharing",
 ]
 
 
@@ -525,6 +669,7 @@ async def recalc_level_and_save(
 async def activate_user(
     user_id: int,
     start_today: bool = Query(True),
+    start_date_override: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
@@ -537,7 +682,10 @@ async def activate_user(
     if user.level is None:
         raise HTTPException(status_code=400, detail="Уровень пользователя не назначен")
 
-    start_date = date.today() if start_today else date.today() + timedelta(days=1)
+    if start_date_override:
+        start_date = start_date_override
+    else:
+        start_date = date.today() if start_today else date.today() + timedelta(days=1)
     user.status = "active"
     user.program_start_date = start_date
     user.program_week_number = 1
@@ -545,9 +693,9 @@ async def activate_user(
 
     # New-logic: level 1-3 with current_period set → create WeekPlan + DayPlan
     if user.level <= 3 and user.current_period is not None:
-        today = date.today()
-        monday = today - timedelta(days=today.weekday())
-        week_start = monday if monday >= today else monday + timedelta(weeks=1)
+        # Week always starts on Monday; find the Monday of or after start_date
+        monday = start_date - timedelta(days=start_date.weekday())
+        week_start = monday if monday >= start_date else monday + timedelta(weeks=1)
 
         available = parse_available_weekdays(user.available_weekdays)
         blueprint = build_week_plan(
@@ -593,5 +741,197 @@ async def activate_user(
             day_index=1,
         ))
 
+    await db.commit()
+    return {"ok": True}
+
+
+class BulkActionRequest(BaseModel):
+    user_ids: List[int]
+    action: str            # migrate_to_new_logic | activate | pause | resume
+    start_date: Optional[date] = None  # для migrate/activate
+
+
+@router.post("/bulk-action")
+async def bulk_action(
+    body: BulkActionRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    if not body.user_ids:
+        raise HTTPException(status_code=400, detail="Нет пользователей")
+
+    results = {"ok": [], "skipped": [], "errors": []}
+
+    for uid in body.user_ids:
+        res = await db.execute(select(models.User).where(models.User.telegram_id == uid))
+        user = res.scalar_one_or_none()
+        if not user:
+            results["skipped"].append(uid)
+            continue
+
+        try:
+            if body.action == "migrate_to_new_logic":
+                # 1. Пересчитываем уровень и устанавливаем новую логику
+                calc = _calc_level_from_user(user)
+                user.level = calc["level"]
+                user.entry_point = calc["entry_point"]
+                user.injury_return_active = calc["injury_return"]
+                user.has_goal_race = calc["has_goal_race"]
+                user.weekly_target_minutes = calc["starting_volume_min"]
+                user.current_period = calc["initial_period"]
+                await db.flush()
+
+                # 2. Создаём WeekPlan
+                start_date = body.start_date or date.today()
+                monday = start_date - timedelta(days=start_date.weekday())
+                user.status = "active"
+                user.program_start_date = start_date
+                user.program_week_number = 1
+                await db.flush()
+
+                available = parse_available_weekdays(user.available_weekdays)
+                blueprint = build_week_plan(
+                    user=user,
+                    week_number=1,
+                    period=user.current_period,
+                    target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    available_weekdays=available,
+                )
+                week_plan = models.WeekPlan(
+                    user_id=user.telegram_id,
+                    week_number=1,
+                    cycle_number=user.cycle_number or 1,
+                    period=user.current_period,
+                    period_week_number=1,
+                    start_date=monday,
+                    end_date=monday + timedelta(days=6),
+                    weekly_target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    is_rollback_week=False,
+                )
+                db.add(week_plan)
+                await db.flush()
+                for slot in blueprint.days:
+                    db.add(models.DayPlan(
+                        week_plan_id=week_plan.id,
+                        day_of_week=slot.day_of_week,
+                        day_type=slot.day_type,
+                        run_subtype=slot.run_subtype,
+                        planned_minutes=slot.planned_minutes,
+                        intensity=slot.intensity,
+                        is_key=slot.is_key,
+                    ))
+                results["ok"].append(uid)
+
+            elif body.action == "activate":
+                if user.current_period is None or user.level is None:
+                    results["skipped"].append(uid)
+                    continue
+                start_date = body.start_date or date.today()
+                monday = start_date - timedelta(days=start_date.weekday())
+                user.status = "active"
+                user.program_start_date = start_date
+                user.program_week_number = 1
+                await db.flush()
+
+                available = parse_available_weekdays(user.available_weekdays)
+                blueprint = build_week_plan(
+                    user=user,
+                    week_number=1,
+                    period=user.current_period,
+                    target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    available_weekdays=available,
+                )
+                week_plan = models.WeekPlan(
+                    user_id=user.telegram_id,
+                    week_number=1,
+                    cycle_number=user.cycle_number or 1,
+                    period=user.current_period,
+                    period_week_number=1,
+                    start_date=monday,
+                    end_date=monday + timedelta(days=6),
+                    weekly_target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    is_rollback_week=False,
+                )
+                db.add(week_plan)
+                await db.flush()
+                for slot in blueprint.days:
+                    db.add(models.DayPlan(
+                        week_plan_id=week_plan.id,
+                        day_of_week=slot.day_of_week,
+                        day_type=slot.day_type,
+                        run_subtype=slot.run_subtype,
+                        planned_minutes=slot.planned_minutes,
+                        intensity=slot.intensity,
+                        is_key=slot.is_key,
+                    ))
+                results["ok"].append(uid)
+
+            elif body.action == "pause":
+                user.status = "paused"
+                results["ok"].append(uid)
+
+            elif body.action == "resume":
+                user.status = "active"
+                results["ok"].append(uid)
+
+            else:
+                raise HTTPException(status_code=400, detail=f"Неизвестное действие: {body.action}")
+
+        except Exception as e:
+            await db.rollback()
+            results["errors"].append({"user_id": uid, "error": str(e)})
+            continue
+
+    await db.commit()
+    return results
+
+
+@router.delete("/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Полное удаление пользователя и всех его данных."""
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Получаем id всех week_plans пользователя
+    wp_result = await db.execute(
+        select(models.WeekPlan.id).where(models.WeekPlan.user_id == user_id)
+    )
+    week_plan_ids = [row[0] for row in wp_result.fetchall()]
+
+    # Разрываем циклический FK: обнуляем session_log_id в day_plans
+    if week_plan_ids:
+        await db.execute(
+            update(models.DayPlan)
+            .where(models.DayPlan.week_plan_id.in_(week_plan_ids))
+            .values(session_log_id=None)
+        )
+
+    # Удаляем session_logs
+    await db.execute(delete(models.SessionLog).where(models.SessionLog.user_id == user_id))
+
+    # Удаляем day_plans через week_plans
+    if week_plan_ids:
+        await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id.in_(week_plan_ids)))
+
+    # Удаляем week_plans
+    await db.execute(delete(models.WeekPlan).where(models.WeekPlan.user_id == user_id))
+
+    # Удаляем из whitelist если есть
+    await db.execute(delete(models.Whitelist).where(models.Whitelist.telegram_id == user_id))
+
+    # Удаляем самого пользователя
+    await db.delete(user)
     await db.commit()
     return {"ok": True}

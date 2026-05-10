@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Activity, Users, BarChart2, Dumbbell, LogOut, CheckSquare } from 'lucide-react'
+import { Activity, Users, BarChart2, Dumbbell, LogOut, CheckSquare, BookOpen } from 'lucide-react'
 import api from '../api/axios'
 
 export default function Sidebar() {
@@ -52,9 +52,10 @@ export default function Sidebar() {
         </NavLink>
 
         {[
-          { to: '/users',     icon: Users,    label: 'Пользователи' },
-          { to: '/analytics', icon: BarChart2, label: 'Аналитика' },
-          { to: '/workouts',  icon: Dumbbell,  label: 'Тренировки' },
+          { to: '/users',             icon: Users,     label: 'Пользователи' },
+          { to: '/analytics',         icon: BarChart2, label: 'Аналитика' },
+          { to: '/workouts',          icon: Dumbbell,  label: 'Тренировки (28д)' },
+          { to: '/workout-templates', icon: BookOpen,  label: 'Силовые шаблоны' },
         ].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

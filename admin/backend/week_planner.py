@@ -190,7 +190,10 @@ def _layout_days(
     run_days: list = []
 
     for day in other_days:
-        if len(strength_days) < n_strength and day not in forbidden_strength:
+        would_be_consecutive = strength_days and day == strength_days[-1] + 1
+        if (len(strength_days) < n_strength
+                and day not in forbidden_strength
+                and not would_be_consecutive):
             strength_days.append(day)
         else:
             run_days.append(day)
