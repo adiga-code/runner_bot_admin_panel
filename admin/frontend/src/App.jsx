@@ -5,6 +5,7 @@ import Layout from './components/Layout'
 import Users from './pages/Users'
 import UserDetail from './pages/UserDetail'
 import Workouts from './pages/Workouts'
+import WorkoutTemplates from './pages/WorkoutTemplates'
 import Analytics from './pages/Analytics'
 import Approvals from './pages/Approvals'
 
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetail />} />
             <Route path="workouts" element={<Workouts />} />
+            <Route path="workout-templates" element={<WorkoutTemplates />} />
             <Route path="analytics" element={<Analytics />} />
           </Route>
         </Routes>
