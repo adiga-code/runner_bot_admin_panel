@@ -404,6 +404,7 @@ _ONBOARDING_FIELDS = [
     "q_pain_increases", "q_injury_history", "q_other_sports",
     "q_strength_frequency", "q_regularity", "q_strength", "q_self_level",
     "q_continuous_run_test",
+    "q_gadget", "q_gadget_types", "q_gadget_sharing",
 ]
 
 
