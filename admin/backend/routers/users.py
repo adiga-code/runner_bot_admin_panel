@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, delete
+from sqlalchemy import select, func, or_, delete, update
 from datetime import date, timedelta
 from typing import Optional
 from dependencies import get_db, get_current_user
@@ -546,5 +546,50 @@ async def activate_user(
             day_index=1,
         ))
 
+    await db.commit()
+    return {"ok": True}
+
+
+@router.delete("/{user_id}")
+async def delete_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Полное удаление пользователя и всех его данных."""
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    # Получаем id всех week_plans пользователя
+    wp_result = await db.execute(
+        select(models.WeekPlan.id).where(models.WeekPlan.user_id == user_id)
+    )
+    week_plan_ids = [row[0] for row in wp_result.fetchall()]
+
+    # Разрываем циклический FK: обнуляем session_log_id в day_plans
+    if week_plan_ids:
+        await db.execute(
+            update(models.DayPlan)
+            .where(models.DayPlan.week_plan_id.in_(week_plan_ids))
+            .values(session_log_id=None)
+        )
+
+    # Удаляем session_logs
+    await db.execute(delete(models.SessionLog).where(models.SessionLog.user_id == user_id))
+
+    # Удаляем day_plans через week_plans
+    if week_plan_ids:
+        await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id.in_(week_plan_ids)))
+
+    # Удаляем week_plans
+    await db.execute(delete(models.WeekPlan).where(models.WeekPlan.user_id == user_id))
+
+    # Удаляем из whitelist если есть
+    await db.execute(delete(models.Whitelist).where(models.Whitelist.telegram_id == user_id))
+
+    # Удаляем самого пользователя
+    await db.delete(user)
     await db.commit()
     return {"ok": True}

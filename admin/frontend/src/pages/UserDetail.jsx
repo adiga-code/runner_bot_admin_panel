@@ -989,6 +989,8 @@ export default function UserDetail() {
   const [pauseModal, setPauseModal]         = useState(false)
   const [activateDateModal, setActivateDateModal] = useState(false)
   const [activateCustomDate, setActivateCustomDate] = useState('')
+  const [deleteUserModal, setDeleteUserModal] = useState(false)
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState('')
   const [newLevel, setNewLevel]             = useState(1)
   const [newStartDate, setNewStartDate]     = useState('')
   const [saving, setSaving]                 = useState(false)
@@ -1065,6 +1067,17 @@ export default function UserDetail() {
     setSaving(false)
   }
 
+  async function doDeleteUser() {
+    if (deleteUserConfirm !== displayName) return
+    setSaving(true)
+    try {
+      await api.delete(`/users/${id}`)
+      toast('Пользователь удалён')
+      navigate('/users')
+    } catch { toast('Ошибка удаления', 'error') }
+    setSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -1116,6 +1129,12 @@ export default function UserDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={() => { setDeleteUserConfirm(''); setDeleteUserModal(true) }}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
+          >
+            Удалить
+          </button>
           <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
           {!user.current_period && <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>}
           {user.status === 'pending' && user.current_period ? (
@@ -1246,6 +1265,39 @@ export default function UserDetail() {
           value={activateCustomDate}
           onChange={e => setActivateCustomDate(e.target.value)}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+      </Modal>
+
+      {/* Delete user modal */}
+      <Modal
+        isOpen={deleteUserModal}
+        onClose={() => setDeleteUserModal(false)}
+        title="Удалить пользователя?"
+        footer={
+          <>
+            <BtnSecondary onClick={() => setDeleteUserModal(false)}>Отмена</BtnSecondary>
+            <button
+              onClick={doDeleteUser}
+              disabled={saving || deleteUserConfirm !== displayName}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
+            >
+              Удалить навсегда
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Будут безвозвратно удалены: пользователь, все чекины, логи, недельные и дневные планы, запись в whitelist.
+        </p>
+        <p className="text-sm text-gray-600 mb-2">
+          Для подтверждения введите имя пользователя: <b>{displayName}</b>
+        </p>
+        <input
+          type="text"
+          value={deleteUserConfirm}
+          onChange={e => setDeleteUserConfirm(e.target.value)}
+          placeholder={displayName}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
         />
       </Modal>
     </div>
