@@ -562,6 +562,7 @@ function TestingTab({ userId, logs = [], onReload, isNewLogic }) {
   const [targetDay, setTargetDay]             = useState(1)
   const [deleteFromDay, setDeleteFromDay]     = useState(1)
   const [resetCheckinDay, setResetCheckinDay] = useState(1)
+  const [shiftDays, setShiftDays]             = useState(-7)
   const [saving, setSaving]                   = useState(false)
   const [calcResult, setCalcResult]           = useState(null)
   const [calcLoading, setCalcLoading]         = useState(false)
@@ -657,6 +658,16 @@ function TestingTab({ userId, logs = [], onReload, isNewLogic }) {
     setSaving(false)
   }
 
+  async function doShiftWeek() {
+    setSaving(true)
+    try {
+      const res = await api.post(`/users/${userId}/shift-week?days=${shiftDays}`)
+      toast(`WeekPlan сдвинут: ${res.data.new_start} — ${res.data.new_end}`)
+      onReload()
+    } catch { toast('Ошибка сдвига', 'error') }
+    setSaving(false)
+  }
+
   return (
     <div>
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 mb-6 flex items-center gap-3">
@@ -704,6 +715,29 @@ function TestingTab({ userId, logs = [], onReload, isNewLogic }) {
               />
               <span className="text-sm text-gray-500">из 28</span>
               <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
+            </div>
+          </div>
+        )}
+
+        {/* Shift week — new logic only */}
+        {isNewLogic && (
+          <div className="bg-white border border-blue-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Сдвинуть неделю (новая система)</h3>
+            <p className="text-xs text-gray-500 mb-4">Сдвигает даты WeekPlan назад/вперёд. Удобно чтобы «сегодня» оказался внутри плана для тестирования.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={-60} max={60} value={shiftDays}
+                onChange={e => setShiftDays(+e.target.value)}
+                className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">дней</span>
+              <button
+                onClick={doShiftWeek}
+                disabled={saving}
+                className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-60"
+              >
+                Сдвинуть
+              </button>
             </div>
           </div>
         )}
