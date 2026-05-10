@@ -929,6 +929,16 @@ export default function UserDetail() {
     setSaving(false)
   }
 
+  async function activateUser(startToday) {
+    setSaving(true)
+    try {
+      await api.post(`/users/${id}/activate?start_today=${startToday}`)
+      toast(startToday ? 'Активирован, план создан' : 'Активирован, план стартует в понедельник')
+      load()
+    } catch { toast('Ошибка активации', 'error') }
+    setSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -973,16 +983,35 @@ export default function UserDetail() {
         <div className="flex gap-2">
           <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
           {!user.current_period && <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>}
-          <button
-            onClick={() => setPauseModal(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              user.status === 'active'
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
-          >
-            {user.status === 'active' ? 'Пауза' : 'Возобновить'}
-          </button>
+          {user.status === 'pending' && user.current_period ? (
+            <>
+              <button
+                onClick={() => activateUser(true)}
+                disabled={saving}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-60"
+              >
+                Активировать сегодня
+              </button>
+              <button
+                onClick={() => activateUser(false)}
+                disabled={saving}
+                className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-60"
+              >
+                Старт завтра
+              </button>
+            </>
+          ) : user.status !== 'pending' && (
+            <button
+              onClick={() => setPauseModal(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                user.status === 'active'
+                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
+            >
+              {user.status === 'active' ? 'Пауза' : 'Возобновить'}
+            </button>
+          )}
         </div>
       </div>
 
