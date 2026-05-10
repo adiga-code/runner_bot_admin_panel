@@ -99,7 +99,7 @@ function BtnSecondary({ children, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+      className="bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
     >
       {children}
     </button>
@@ -350,7 +350,7 @@ function ProgressTab({ logs = [], onReload }) {
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
