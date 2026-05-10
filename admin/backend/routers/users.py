@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_, delete, update
 from datetime import date, timedelta
-from typing import Optional
+from typing import Optional, List
+from pydantic import BaseModel
 from dependencies import get_db, get_current_user
 from schemas import (
     UserListResponse, UserListItem, UserDetail,
@@ -548,6 +549,153 @@ async def activate_user(
 
     await db.commit()
     return {"ok": True}
+
+
+class BulkActionRequest(BaseModel):
+    user_ids: List[int]
+    action: str            # migrate_to_new_logic | activate | pause | resume
+    start_date: Optional[date] = None  # для migrate/activate
+
+
+@router.post("/bulk-action")
+async def bulk_action(
+    body: BulkActionRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    if not body.user_ids:
+        raise HTTPException(status_code=400, detail="Нет пользователей")
+
+    results = {"ok": [], "skipped": [], "errors": []}
+
+    for uid in body.user_ids:
+        res = await db.execute(select(models.User).where(models.User.telegram_id == uid))
+        user = res.scalar_one_or_none()
+        if not user:
+            results["skipped"].append(uid)
+            continue
+
+        try:
+            if body.action == "migrate_to_new_logic":
+                # 1. Пересчитываем уровень и устанавливаем новую логику
+                calc = _calc_level_from_user(user)
+                user.level = calc["level"]
+                user.entry_point = calc["entry_point"]
+                user.injury_return_active = calc["injury_return"]
+                user.has_goal_race = calc["has_goal_race"]
+                user.weekly_target_minutes = calc["starting_volume_min"]
+                user.current_period = calc["initial_period"]
+                await db.flush()
+
+                # 2. Создаём WeekPlan
+                start_date = body.start_date or date.today()
+                monday = start_date - timedelta(days=start_date.weekday())
+                user.status = "active"
+                user.program_start_date = start_date
+                user.program_week_number = 1
+                await db.flush()
+
+                available = parse_available_weekdays(user.available_weekdays)
+                blueprint = build_week_plan(
+                    user=user,
+                    week_number=1,
+                    period=user.current_period,
+                    target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    available_weekdays=available,
+                )
+                week_plan = models.WeekPlan(
+                    user_id=user.telegram_id,
+                    week_number=1,
+                    cycle_number=user.cycle_number or 1,
+                    period=user.current_period,
+                    period_week_number=1,
+                    start_date=monday,
+                    end_date=monday + timedelta(days=6),
+                    weekly_target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    is_rollback_week=False,
+                )
+                db.add(week_plan)
+                await db.flush()
+                for slot in blueprint.days:
+                    db.add(models.DayPlan(
+                        week_plan_id=week_plan.id,
+                        day_of_week=slot.day_of_week,
+                        day_type=slot.day_type,
+                        run_subtype=slot.run_subtype,
+                        planned_minutes=slot.planned_minutes,
+                        intensity=slot.intensity,
+                        is_key=slot.is_key,
+                    ))
+                results["ok"].append(uid)
+
+            elif body.action == "activate":
+                if user.current_period is None or user.level is None:
+                    results["skipped"].append(uid)
+                    continue
+                start_date = body.start_date or date.today()
+                monday = start_date - timedelta(days=start_date.weekday())
+                user.status = "active"
+                user.program_start_date = start_date
+                user.program_week_number = 1
+                await db.flush()
+
+                available = parse_available_weekdays(user.available_weekdays)
+                blueprint = build_week_plan(
+                    user=user,
+                    week_number=1,
+                    period=user.current_period,
+                    target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    available_weekdays=available,
+                )
+                week_plan = models.WeekPlan(
+                    user_id=user.telegram_id,
+                    week_number=1,
+                    cycle_number=user.cycle_number or 1,
+                    period=user.current_period,
+                    period_week_number=1,
+                    start_date=monday,
+                    end_date=monday + timedelta(days=6),
+                    weekly_target_minutes=user.weekly_target_minutes or 60,
+                    is_recovery_week=False,
+                    is_rollback_week=False,
+                )
+                db.add(week_plan)
+                await db.flush()
+                for slot in blueprint.days:
+                    db.add(models.DayPlan(
+                        week_plan_id=week_plan.id,
+                        day_of_week=slot.day_of_week,
+                        day_type=slot.day_type,
+                        run_subtype=slot.run_subtype,
+                        planned_minutes=slot.planned_minutes,
+                        intensity=slot.intensity,
+                        is_key=slot.is_key,
+                    ))
+                results["ok"].append(uid)
+
+            elif body.action == "pause":
+                user.status = "paused"
+                results["ok"].append(uid)
+
+            elif body.action == "resume":
+                user.status = "active"
+                results["ok"].append(uid)
+
+            else:
+                raise HTTPException(status_code=400, detail=f"Неизвестное действие: {body.action}")
+
+        except Exception as e:
+            await db.rollback()
+            results["errors"].append({"user_id": uid, "error": str(e)})
+            continue
+
+    await db.commit()
+    return results
 
 
 @router.delete("/{user_id}")
