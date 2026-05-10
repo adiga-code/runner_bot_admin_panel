@@ -259,6 +259,84 @@ async def get_week_plans(
     ]
 
 
+@router.post("/{user_id}/generate-week")
+async def generate_week(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    """Manually create the next WeekPlan+DayPlan for a new-logic user."""
+    from sqlalchemy.orm import selectinload
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if not user.current_period:
+        raise HTTPException(status_code=400, detail="Только для пользователей в новой логике (current_period не задан)")
+
+    # Determine start_date and counters based on last existing week plan
+    last_wp_result = await db.execute(
+        select(models.WeekPlan)
+        .where(models.WeekPlan.user_id == user_id)
+        .order_by(models.WeekPlan.start_date.desc())
+        .limit(1)
+    )
+    last_wp = last_wp_result.scalar_one_or_none()
+
+    today = date.today()
+    if last_wp:
+        start_date = last_wp.end_date + timedelta(days=1)
+        week_number = last_wp.week_number + 1
+        period_week_number = last_wp.period_week_number + 1
+    else:
+        # No plans exist — start from current Monday
+        monday = today - timedelta(days=today.weekday())
+        start_date = monday
+        week_number = user.program_week_number or 1
+        period_week_number = user.period_week_number or 1
+
+    available = parse_available_weekdays(user.available_weekdays)
+    blueprint = build_week_plan(
+        user=user,
+        week_number=week_number,
+        period=user.current_period,
+        target_minutes=user.weekly_target_minutes or 60,
+        is_recovery_week=False,
+        available_weekdays=available,
+    )
+
+    week_plan = models.WeekPlan(
+        user_id=user.telegram_id,
+        week_number=week_number,
+        cycle_number=user.cycle_number or 1,
+        period=user.current_period,
+        period_week_number=period_week_number,
+        start_date=start_date,
+        end_date=start_date + timedelta(days=6),
+        weekly_target_minutes=user.weekly_target_minutes or 60,
+        is_recovery_week=False,
+        is_rollback_week=False,
+    )
+    db.add(week_plan)
+    await db.flush()
+
+    for slot in blueprint.days:
+        db.add(models.DayPlan(
+            week_plan_id=week_plan.id,
+            day_of_week=slot.day_of_week,
+            day_type=slot.day_type,
+            run_subtype=slot.run_subtype,
+            planned_minutes=slot.planned_minutes,
+            intensity=slot.intensity,
+            is_key=slot.is_key,
+        ))
+
+    await db.commit()
+    return {"ok": True, "week_plan_id": week_plan.id}
+
+
 @router.put("/{user_id}/level")
 async def update_level(
     user_id: int,

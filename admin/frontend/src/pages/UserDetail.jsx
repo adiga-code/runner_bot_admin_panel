@@ -524,6 +524,7 @@ function WeekPlanTab({ userId }) {
   const toast = useToast()
   const [plans, setPlans]           = useState([])
   const [loading, setLoading]       = useState(true)
+  const [generating, setGenerating] = useState(false)
   const [acting, setActing]         = useState(null)   // week_plan_id being acted on
   const [confirmDelete, setConfirm] = useState(null)   // wp to delete
 
@@ -536,6 +537,17 @@ function WeekPlanTab({ userId }) {
   }
 
   useEffect(() => { load() }, [userId])
+
+  async function generateWeek() {
+    setGenerating(true)
+    try {
+      await api.post(`/users/${userId}/generate-week`)
+      toast('План недели создан')
+      load()
+    } catch { toast('Ошибка создания плана', 'error') }
+    setGenerating(false)
+  }
+
 
   async function handleDelete(wp) {
     setActing(wp.id)
@@ -564,74 +576,79 @@ function WeekPlanTab({ userId }) {
     </div>
   )
 
-  if (!plans.length) return (
-    <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400 text-sm">
-      Нет недельных планов
-    </div>
-  )
-
   return (
     <>
       <div className="flex flex-col gap-4">
-        {plans.map(wp => (
-          <div key={wp.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
-              <span className="font-semibold text-gray-900">Неделя {wp.week_number}</span>
-              {wp.cycle_number && <span className="text-xs text-gray-400">Цикл {wp.cycle_number}</span>}
-              <span className="text-sm text-gray-600">{PERIOD_LABELS[wp.period] || wp.period}</span>
-              {wp.start_date && (
-                <span className="text-sm text-gray-500">{formatDate(wp.start_date)} – {formatDate(wp.end_date)}</span>
-              )}
-              <span className="text-sm font-medium text-gray-700">{wp.weekly_target_minutes} мин/нед</span>
-              {wp.is_recovery_week && (
-                <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Разгрузка</span>
-              )}
-              {wp.completion_rate != null && (
-                <span className="text-xs text-gray-500">{Math.round(wp.completion_rate * 100)}%</span>
-              )}
-              {wp.closed_at && (
-                <span className="text-xs text-gray-400">Закрыта {formatDate(wp.closed_at)}</span>
-              )}
-              <div className="ml-auto flex gap-2">
-                <button
-                  onClick={() => handleRecalculate(wp)}
-                  disabled={acting === wp.id}
-                  className="text-xs px-3 py-1 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 transition-colors"
-                >
-                  {acting === wp.id ? '...' : 'Пересчитать'}
-                </button>
-                <button
-                  onClick={() => setConfirm(wp)}
-                  disabled={acting === wp.id}
-                  className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
-                >
-                  Удалить
-                </button>
-              </div>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  {['День','Тип','Подтип','Минуты','Интенс.','Ключевая'].map(h => (
-                    <th key={h} className="px-4 py-2 text-left text-xs text-gray-400 font-medium">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {wp.days.map(d => (
-                  <tr key={d.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                    <td className="px-4 py-2 font-medium text-gray-700">{DOW[d.day_of_week - 1] ?? d.day_of_week}</td>
-                    <td className="px-4 py-2 text-gray-700">{DAY_TYPE[d.day_type] || d.day_type || '—'}</td>
-                    <td className="px-4 py-2 text-gray-500">{RUN_SUBTYPE[d.run_subtype] || d.run_subtype || '—'}</td>
-                    <td className="px-4 py-2 text-gray-700">{d.planned_minutes ? `${d.planned_minutes} мин` : '—'}</td>
-                    <td className="px-4 py-2 text-gray-500">{d.intensity ?? '—'}</td>
-                    <td className="px-4 py-2">{d.is_key ? '⭐' : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className="flex justify-end">
+          <BtnPrimary onClick={generateWeek} disabled={generating}>
+            {generating ? 'Создаём...' : '+ Создать план недели'}
+          </BtnPrimary>
+        </div>
+        {plans.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400 text-sm">
+            Нет недельных планов
           </div>
-        ))}
+        ) : (
+          plans.map(wp => (
+            <div key={wp.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+                <span className="font-semibold text-gray-900">Неделя {wp.week_number}</span>
+                {wp.cycle_number && <span className="text-xs text-gray-400">Цикл {wp.cycle_number}</span>}
+                <span className="text-sm text-gray-600">{PERIOD_LABELS[wp.period] || wp.period}</span>
+                {wp.start_date && (
+                  <span className="text-sm text-gray-500">{formatDate(wp.start_date)} – {formatDate(wp.end_date)}</span>
+                )}
+                <span className="text-sm font-medium text-gray-700">{wp.weekly_target_minutes} мин/нед</span>
+                {wp.is_recovery_week && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Разгрузка</span>
+                )}
+                {wp.completion_rate != null && (
+                  <span className="text-xs text-gray-500">{Math.round(wp.completion_rate * 100)}%</span>
+                )}
+                {wp.closed_at && (
+                  <span className="text-xs text-gray-400">Закрыта {formatDate(wp.closed_at)}</span>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <button
+                    onClick={() => handleRecalculate(wp)}
+                    disabled={acting === wp.id}
+                    className="text-xs px-3 py-1 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 transition-colors"
+                  >
+                    {acting === wp.id ? '...' : 'Пересчитать'}
+                  </button>
+                  <button
+                    onClick={() => setConfirm(wp)}
+                    disabled={acting === wp.id}
+                    className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    {['День','Тип','Подтип','Минуты','Интенс.','Ключевая'].map(h => (
+                      <th key={h} className="px-4 py-2 text-left text-xs text-gray-400 font-medium">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {wp.days.map(d => (
+                    <tr key={d.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium text-gray-700">{DOW[d.day_of_week - 1] ?? d.day_of_week}</td>
+                      <td className="px-4 py-2 text-gray-700">{DAY_TYPE[d.day_type] || d.day_type || '—'}</td>
+                      <td className="px-4 py-2 text-gray-500">{RUN_SUBTYPE[d.run_subtype] || d.run_subtype || '—'}</td>
+                      <td className="px-4 py-2 text-gray-700">{d.planned_minutes ? `${d.planned_minutes} мин` : '—'}</td>
+                      <td className="px-4 py-2 text-gray-500">{d.intensity ?? '—'}</td>
+                      <td className="px-4 py-2">{d.is_key ? '⭐' : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))
+        )}
       </div>
 
       {confirmDelete && (
