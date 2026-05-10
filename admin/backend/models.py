@@ -57,6 +57,9 @@ class User(Base):
     q_strength              = Column(String(20))
     q_self_level            = Column(String(20))
     q_continuous_run_test   = Column(String(10))   # yes/no/unsure (new v2)
+    q_gadget                = Column(String(10))    # yes / no
+    q_gadget_types          = Column(String(200))   # whoop,garmin,...
+    q_gadget_sharing        = Column(String(10))    # yes / no / later
 
     # New: доступные дни и объём
     available_weekdays      = Column(String(20))   # "1,3,5"

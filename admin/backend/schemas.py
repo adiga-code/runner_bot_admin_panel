@@ -71,6 +71,9 @@ class UserDetail(BaseModel):
     q_distance: Optional[str] = None
     q_race_date: Optional[str] = None
     q_continuous_run_test: Optional[str] = None
+    q_gadget: Optional[str] = None
+    q_gadget_types: Optional[str] = None
+    q_gadget_sharing: Optional[str] = None
     # Extra user fields
     role: Optional[str] = None
     is_active: Optional[bool] = None
