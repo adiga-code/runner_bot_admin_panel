@@ -55,7 +55,7 @@ export default function Sidebar() {
           { to: '/users',             icon: Users,     label: 'Пользователи' },
           { to: '/analytics',         icon: BarChart2, label: 'Аналитика' },
           { to: '/workouts',          icon: Dumbbell,  label: 'Тренировки (28д)' },
-          { to: '/workout-templates', icon: BookOpen,  label: 'Шаблоны (новые)' },
+          { to: '/workout-templates', icon: BookOpen,  label: 'Силовые шаблоны' },
         ].map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}
