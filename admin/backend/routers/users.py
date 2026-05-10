@@ -447,6 +447,7 @@ async def recalc_level_and_save(
 async def activate_user(
     user_id: int,
     start_today: bool = Query(True),
+    start_date_override: Optional[date] = Query(None),
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
@@ -459,7 +460,10 @@ async def activate_user(
     if user.level is None:
         raise HTTPException(status_code=400, detail="Уровень пользователя не назначен")
 
-    start_date = date.today() if start_today else date.today() + timedelta(days=1)
+    if start_date_override:
+        start_date = start_date_override
+    else:
+        start_date = date.today() if start_today else date.today() + timedelta(days=1)
     user.status = "active"
     user.program_start_date = start_date
     user.program_week_number = 1
@@ -467,9 +471,9 @@ async def activate_user(
 
     # New-logic: level 1-3 with current_period set → create WeekPlan + DayPlan
     if user.level <= 3 and user.current_period is not None:
-        today = date.today()
-        monday = today - timedelta(days=today.weekday())
-        week_start = monday if monday >= today else monday + timedelta(weeks=1)
+        # Week always starts on Monday; find the Monday of or after start_date
+        monday = start_date - timedelta(days=start_date.weekday())
+        week_start = monday if monday >= start_date else monday + timedelta(weeks=1)
 
         available = parse_available_weekdays(user.available_weekdays)
         blueprint = build_week_plan(

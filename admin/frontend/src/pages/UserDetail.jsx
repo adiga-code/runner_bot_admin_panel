@@ -540,7 +540,7 @@ function WeekPlanTab({ userId }) {
             <tbody>
               {wp.days.map(d => (
                 <tr key={d.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-2 font-medium text-gray-700">{DOW[d.day_of_week] ?? d.day_of_week}</td>
+                  <td className="px-4 py-2 font-medium text-gray-700">{DOW[d.day_of_week - 1] ?? d.day_of_week}</td>
                   <td className="px-4 py-2 text-gray-700">{DAY_TYPE[d.day_type] || d.day_type || '—'}</td>
                   <td className="px-4 py-2 text-gray-500">{RUN_SUBTYPE[d.run_subtype] || d.run_subtype || '—'}</td>
                   <td className="px-4 py-2 text-gray-700">{d.planned_minutes ? `${d.planned_minutes} мин` : '—'}</td>
@@ -953,6 +953,8 @@ export default function UserDetail() {
   const [levelModal, setLevelModal]         = useState(false)
   const [startModal, setStartModal]         = useState(false)
   const [pauseModal, setPauseModal]         = useState(false)
+  const [activateDateModal, setActivateDateModal] = useState(false)
+  const [activateCustomDate, setActivateCustomDate] = useState('')
   const [newLevel, setNewLevel]             = useState(1)
   const [newStartDate, setNewStartDate]     = useState('')
   const [saving, setSaving]                 = useState(false)
@@ -1011,7 +1013,19 @@ export default function UserDetail() {
     setSaving(true)
     try {
       await api.post(`/users/${id}/activate?start_today=${startToday}`)
-      toast(startToday ? 'Активирован, план создан' : 'Активирован, план стартует в понедельник')
+      toast(startToday ? 'Активирован, план создан' : 'Активирован, старт завтра')
+      load()
+    } catch { toast('Ошибка активации', 'error') }
+    setSaving(false)
+  }
+
+  async function activateUserOnDate() {
+    if (!activateCustomDate) return
+    setSaving(true)
+    try {
+      await api.post(`/users/${id}/activate?start_today=false&start_date_override=${activateCustomDate}`)
+      toast(`Активирован, старт ${activateCustomDate}`)
+      setActivateDateModal(false)
       load()
     } catch { toast('Ошибка активации', 'error') }
     setSaving(false)
@@ -1085,6 +1099,13 @@ export default function UserDetail() {
                 className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-60"
               >
                 Старт завтра
+              </button>
+              <button
+                onClick={() => { setActivateCustomDate(''); setActivateDateModal(true) }}
+                disabled={saving}
+                className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-60"
+              >
+                На дату...
               </button>
             </>
           ) : user.status !== 'pending' && (
@@ -1174,6 +1195,24 @@ export default function UserDetail() {
             : `Программа пользователя ${displayName} будет возобновлена.`
           }
         </p>
+      </Modal>
+
+      {/* Activate on specific date modal */}
+      <Modal
+        isOpen={activateDateModal}
+        onClose={() => setActivateDateModal(false)}
+        title="Активировать с конкретной даты"
+        footer={<><BtnSecondary onClick={() => setActivateDateModal(false)}>Отмена</BtnSecondary><BtnPrimary onClick={activateUserOnDate} disabled={saving || !activateCustomDate}>Активировать</BtnPrimary></>}
+      >
+        <p className="text-sm text-gray-500 mb-3">
+          Первая неделя начнётся в ближайший понедельник от выбранной даты.
+        </p>
+        <input
+          type="date"
+          value={activateCustomDate}
+          onChange={e => setActivateCustomDate(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
       </Modal>
     </div>
   )
