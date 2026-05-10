@@ -6,6 +6,11 @@ import Badge from '../components/Badge'
 
 const LEVELS = { 1: 'Start', 2: 'Return', 3: 'Base', 4: 'Stability' }
 const STATUS_LABELS = { active: 'Активен', pending: 'Ожидает' }
+const PERIOD_LABELS = {
+  base_in: 'Base-In', base: 'Base',
+  preparatory: 'Prep', specialized: 'Spec',
+  recovery_period: 'Recovery',
+}
 
 function formatDate(d) {
   if (!d) return '—'
@@ -119,7 +124,7 @@ export default function Users() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              {['Пользователь', 'Уровень', 'Статус', 'День', 'Старт', 'Повторов', 'Создан'].map(h => (
+              {['Пользователь', 'Уровень', 'Статус', 'Прогресс', 'Период / Старт', 'Повторов', 'Создан'].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {h}
                 </th>
@@ -162,15 +167,21 @@ export default function Users() {
                       {u.status ? <Badge value={u.status} label={STATUS_LABELS[u.status] || u.status} /> : '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {u.current_day != null ? `${u.current_day} / 28` : '—'}
+                      {u.current_period
+                        ? <span className="text-violet-600 font-medium">Нед.{u.program_week_number || '?'}</span>
+                        : u.current_day != null ? `${u.current_day} / 28` : '—'
+                      }
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {u.program_start_date ? formatDate(u.program_start_date) : (
-                        <span className="text-gray-400">Не назначен</span>
-                      )}
+                      {u.current_period
+                        ? <span className="text-violet-500 text-xs">{PERIOD_LABELS[u.current_period] || u.current_period}</span>
+                        : u.program_start_date ? formatDate(u.program_start_date) : (
+                          <span className="text-gray-400">Не назначен</span>
+                        )
+                      }
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
-                      {u.week_repeat_count ?? '—'}
+                      {u.current_period ? <span className="text-gray-300">—</span> : (u.week_repeat_count ?? '—')}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-700">
                       {formatDate(u.created_at)}
