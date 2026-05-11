@@ -6,7 +6,7 @@ import Badge from '../components/Badge'
 import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 
-// ─── Dictionaries ────────────────────────────────────────────────────────────
+// ─── Dictionaries ────────────────────────────────────────────────────────────────────────────
 const LEVELS      = { 1:'Start', 2:'Return', 3:'Base', 4:'Stability', 5:'Performance' }
 const STATUS_LABELS = { active:'Активен', pending:'Ожидает' }
 const WELLBEING   = { 1:'😞 Плохо', 2:'😤 Тяжеловато', 3:'😐 Нормально', 4:'😊 Хорошо', 5:'🤩 Отлично' }
@@ -34,7 +34,7 @@ const SPORTS      = { gym:'Зал', bike:'Велосипед', swim:'Плава�
 const STR_FREQ    = { no:'Не делаю', sometimes:'Иногда', regularly:'Регулярно' }
 const SELF_LEVEL  = { beginner:'Новичок', base:'Базовый', medium:'Средний', advanced:'Продвинутый' }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────────────────
 function formatDate(d) {
   if (!d) return '—'
   const s = typeof d === 'string' ? d.split('T')[0] : String(d)
@@ -56,7 +56,7 @@ function parseTags(str, dict) {
   return str.split(',').map(s => dict[s.trim()] || s.trim())
 }
 
-// ─── Shared UI ────────────────────────────────────────────────────────────────
+// ─── Shared UI ──────────────────────────────────────────────────────────────────────────────
 function InfoRow({ label, value }) {
   return (
     <div className="flex items-start py-2 border-b border-gray-100 last:border-0">
@@ -97,7 +97,7 @@ function BtnSecondary({ children, onClick }) {
   )
 }
 
-// ─── Profile Tab ──────────────────────────────────────────────────────────────
+// ─── Profile Tab ─────────────────────────────────────────────────────────────────────────────
 function ProfileTab({ user }) {
   const age = calcAge(user.birth_date)
   const tz = user.timezone_offset != null
@@ -236,7 +236,7 @@ function SectionTitle({ children }) {
   )
 }
 
-// ─── Progress Tab ─────────────────────────────────────────────────────────────
+// ─── Progress Tab ─────────────────────────────────────────────────────────────────────────────
 function ProgressTab({ logs, onReload }) {
   const toast = useToast()
   const done    = logs.filter(l => l.completion_status === 'done').length
@@ -302,7 +302,7 @@ function ProgressTab({ logs, onReload }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              {['День','Дата','Тип','Версия','Самоч.','Сон','Боль','Стресс','Статус','Усилие','⚑',''].map(h => (
+              {['День','Дата','Тип','Версия','Самоч.','Сон','Боль','Стресс','Статус','Усилие','⧑',''].map(h => (
                 <th key={h} className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>
               ))}
             </tr>
@@ -370,7 +370,6 @@ function ProgressTab({ logs, onReload }) {
         </table>
       </div>
 
-      {/* Assign modal */}
       <Modal
         isOpen={!!assignModal}
         onClose={() => setAssignModal(null)}
@@ -388,7 +387,6 @@ function ProgressTab({ logs, onReload }) {
         </div>
       </Modal>
 
-      {/* Status modal */}
       <Modal
         isOpen={!!statusModal}
         onClose={() => setStatusModal(null)}
@@ -408,7 +406,7 @@ function ProgressTab({ logs, onReload }) {
   )
 }
 
-// ─── Testing Tab ─────────────────────────────────────────────────────────────
+// ─── Testing Tab ────────────────────────────────────────────────────────────────────────────
 function TestingTab({ userId, onReload }) {
   const toast = useToast()
   const [targetDay, setTargetDay]       = useState(1)
@@ -472,7 +470,6 @@ function TestingTab({ userId, onReload }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Set day */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
           <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
@@ -487,7 +484,6 @@ function TestingTab({ userId, onReload }) {
           </div>
         </div>
 
-        {/* Delete logs from day */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
           <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
@@ -507,7 +503,6 @@ function TestingTab({ userId, onReload }) {
           </div>
         </div>
 
-        {/* Full reset */}
         <div className="bg-white border border-red-100 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Полный сброс прогресса</h3>
           <p className="text-xs text-gray-500 mb-4">Удаляет все логи, устанавливает старт = сегодня (день 1), статус = active, повторы = 0. Анкета сохраняется.</p>
@@ -519,7 +514,6 @@ function TestingTab({ userId, onReload }) {
           </button>
         </div>
 
-        {/* Reset onboarding */}
         <div className="bg-white border border-red-100 rounded-xl p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-1">Сбросить онбординг</h3>
           <p className="text-xs text-gray-500 mb-4">Удаляет все логи и анкету. Статус → pending, уровень и дата старта очищаются. Бот запустит онбординг заново.</p>
@@ -567,7 +561,7 @@ function TestingTab({ userId, onReload }) {
   )
 }
 
-// ─── Checkins Tab ─────────────────────────────────────────────────────────────
+// ─── Checkins Tab ────────────────────────────────────────────────────────────────────────────
 function CheckinsTab({ logs }) {
   const [open, setOpen] = useState(null)
 
@@ -630,7 +624,7 @@ function CheckinsTab({ logs }) {
   )
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Page ──────────────────────────────────────────────────────────────────────────────
 export default function UserDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -641,12 +635,13 @@ export default function UserDetail() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab]       = useState('profile')
 
-  const [levelModal, setLevelModal]   = useState(false)
-  const [startModal, setStartModal]   = useState(false)
-  const [pauseModal, setPauseModal]   = useState(false)
-  const [newLevel, setNewLevel]       = useState(1)
-  const [newStartDate, setNewStartDate] = useState('')
-  const [saving, setSaving]           = useState(false)
+  const [levelModal, setLevelModal]           = useState(false)
+  const [startModal, setStartModal]           = useState(false)
+  const [pauseModal, setPauseModal]           = useState(false)
+  const [clearReturnModal, setClearReturnModal] = useState(false)
+  const [newLevel, setNewLevel]               = useState(1)
+  const [newStartDate, setNewStartDate]       = useState('')
+  const [saving, setSaving]                   = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -698,6 +693,17 @@ export default function UserDetail() {
     setSaving(false)
   }
 
+  async function doClearReturn() {
+    setSaving(true)
+    try {
+      await api.post(`/users/${id}/clear-return-mode`)
+      toast('Флаг "После перерыва" снят')
+      setClearReturnModal(false)
+      load()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -742,6 +748,14 @@ export default function UserDetail() {
         <div className="flex gap-2">
           <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
           <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>
+          {user.injury_return_active && (
+            <button
+              onClick={() => setClearReturnModal(true)}
+              className="bg-amber-100 text-amber-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-200 transition-colors"
+            >
+              Снять «После перерыва»
+            </button>
+          )}
           <button
             onClick={() => setPauseModal(true)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -826,6 +840,16 @@ export default function UserDetail() {
             : `Программа пользователя ${displayName} будет возобновлена.`
           }
         </p>
+      </Modal>
+
+      {/* Clear return mode modal */}
+      <Modal
+        isOpen={clearReturnModal}
+        onClose={() => setClearReturnModal(false)}
+        title='Снять флаг "После перерыва"?'
+        footer={<><BtnSecondary onClick={() => setClearReturnModal(false)}>Отмена</BtnSecondary><BtnPrimary onClick={doClearReturn} disabled={saving}>Снять</BtnPrimary></>}
+      >
+        <p className="text-sm text-gray-600">Пользователь будет переведён в обычный режим без адаптации под возврат после перерыва. Отменить действие можно только через сброс онбординга.</p>
       </Modal>
     </div>
   )
