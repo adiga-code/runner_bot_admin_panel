@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 from typing import Optional, List
 from datetime import date as Date, datetime
 
@@ -24,6 +24,7 @@ class UserListItem(BaseModel):
     week_repeat_count: Optional[int] = None
     created_at: Optional[datetime] = None
     current_day: Optional[int] = None
+    injury_return_active: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 
@@ -77,6 +78,12 @@ class UserDetail(BaseModel):
     extended_week5: Optional[bool] = None
 
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def injury_return_active(self) -> bool:
+        """Mirrors detect_after_break_mode() from run_bot engine."""
+        return self.level in (2, 3) and self.q_break_duration in ("3_6m", "6plus")
 
 
 class UserListResponse(BaseModel):

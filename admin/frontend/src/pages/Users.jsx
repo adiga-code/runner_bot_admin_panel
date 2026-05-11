@@ -4,7 +4,7 @@ import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import api from '../api/axios'
 import Badge from '../components/Badge'
 
-const LEVELS = { 1: 'Start', 2: 'Return', 3: 'Base', 4: 'Stability' }
+const LEVELS = { 1: 'Start', 2: 'Return', 3: 'Base', 4: 'Stability', 5: 'Performance' }
 const STATUS_LABELS = { active: 'Активен', pending: 'Ожидает' }
 
 function formatDate(d) {
@@ -156,7 +156,10 @@ export default function Users() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {u.level ? <Badge value="default" label={LEVELS[u.level]} /> : '—'}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {u.level ? <Badge value="default" label={LEVELS[u.level]} /> : '—'}
+                        {u.injury_return_active && <Badge value="injury" label="После перерыва" />}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {u.status ? <Badge value={u.status} label={STATUS_LABELS[u.status] || u.status} /> : '—'}

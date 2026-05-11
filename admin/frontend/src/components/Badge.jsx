@@ -9,6 +9,7 @@ const variants = {
   done:     'bg-green-100 text-green-700',
   partial:  'bg-yellow-100 text-yellow-700',
   skipped:  'bg-red-100 text-red-600',
+  injury:   'bg-amber-100 text-amber-700',
   default:  'bg-gray-100 text-gray-600',
 }
 

@@ -24,6 +24,11 @@ def compute_current_day(start_date: Optional[date]) -> Optional[int]:
     return max(1, delta)
 
 
+def _compute_injury_return(user) -> bool:
+    """Mirrors detect_after_break_mode() from run_bot/engine/level_assignment.py."""
+    return user.level in (2, 3) and getattr(user, "q_break_duration", None) in ("3_6m", "6plus")
+
+
 @router.get("", response_model=UserListResponse)
 async def list_users(
     search: Optional[str] = Query(None),
@@ -73,6 +78,7 @@ async def list_users(
             week_repeat_count=u.week_repeat_count,
             created_at=u.created_at,
             current_day=compute_current_day(u.program_start_date),
+            injury_return_active=_compute_injury_return(u),
         ))
 
     return UserListResponse(items=items, total=total, page=page, pages=pages)

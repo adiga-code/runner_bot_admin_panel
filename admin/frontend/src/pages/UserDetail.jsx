@@ -7,7 +7,7 @@ import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 
 // ─── Dictionaries ────────────────────────────────────────────────────────────
-const LEVELS      = { 1:'Start', 2:'Return', 3:'Base', 4:'Stability' }
+const LEVELS      = { 1:'Start', 2:'Return', 3:'Base', 4:'Stability', 5:'Performance' }
 const STATUS_LABELS = { active:'Активен', pending:'Ожидает' }
 const WELLBEING   = { 1:'😞 Плохо', 2:'😤 Тяжеловато', 3:'😐 Нормально', 4:'😊 Хорошо', 5:'🤩 Отлично' }
 const SLEEP       = { 1:'😴 Плохо', 2:'💤 Нормально', 3:'✨ Хорошо' }
@@ -130,7 +130,13 @@ function ProfileTab({ user }) {
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Программа</h3>
           <div className="flex items-start py-2 border-b border-gray-100">
             <span className="text-sm text-gray-500 w-44 shrink-0">Уровень</span>
-            {user.level ? <Badge value="default" label={LEVELS[user.level]} /> : <span className="text-sm text-gray-900">—</span>}
+            <div className="flex items-center gap-1 flex-wrap">
+              {user.level
+                ? <Badge value="default" label={LEVELS[user.level]} />
+                : <span className="text-sm text-gray-900">—</span>
+              }
+              {user.injury_return_active && <Badge value="injury" label="После перерыва" />}
+            </div>
           </div>
           <div className="flex items-start py-2 border-b border-gray-100">
             <span className="text-sm text-gray-500 w-44 shrink-0">Статус</span>
@@ -318,7 +324,7 @@ function ProgressTab({ logs, onReload }) {
                     </td>
                     <td className="px-3 py-2.5">{log.wellbeing ? WELLBEING[log.wellbeing]?.split(' ')[0] : '—'}</td>
                     <td className="px-3 py-2.5">{log.sleep_quality ? SLEEP[log.sleep_quality]?.split(' ')[0] : '—'}</td>
-                    <td className="px-3 py-2.5">{log.pain_level ? PAIN[log.pain_level]?.split(' ')[0] : '—'}</td>
+                    <td className="px-3 py2.5">{log.pain_level ? PAIN[log.pain_level]?.split(' ')[0] : '—'}</td>
                     <td className="px-3 py-2.5">{log.stress_level ? STRESS[log.stress_level]?.split(' ')[0] : '—'}</td>
                     <td className="px-3 py-2.5">
                       {noCheckin
@@ -728,6 +734,7 @@ export default function UserDetail() {
             <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
             <div className="flex items-center gap-2 mt-1.5">
               {user.level && <Badge value="default" label={LEVELS[user.level]} />}
+              {user.injury_return_active && <Badge value="injury" label="После перерыва" />}
               {user.status && <Badge value={user.status} label={STATUS_LABELS[user.status]} />}
             </div>
           </div>
