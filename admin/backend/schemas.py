@@ -1,4 +1,4 @@
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date as Date, datetime
 
@@ -48,6 +48,7 @@ class UserDetail(BaseModel):
     status: Optional[str] = None
     onboarding_complete: Optional[bool] = None
     created_at: Optional[datetime] = None
+    injury_return_active: Optional[bool] = None
     q_goal: Optional[str] = None
     q_runs: Optional[str] = None
     q_frequency: Optional[str] = None
@@ -78,12 +79,6 @@ class UserDetail(BaseModel):
     extended_week5: Optional[bool] = None
 
     model_config = {"from_attributes": True}
-
-    @computed_field
-    @property
-    def injury_return_active(self) -> bool:
-        """Mirrors detect_after_break_mode() from run_bot engine."""
-        return self.level in (2, 3) and self.q_break_duration in ("3_6m", "6plus")
 
 
 class UserListResponse(BaseModel):

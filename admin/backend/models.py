@@ -29,6 +29,7 @@ class User(Base):
     reminders_enabled       = Column(Boolean, default=True)
     extended_week5          = Column(Boolean, default=False)
     is_active               = Column(Boolean, default=True)
+    injury_return_active    = Column(Boolean, default=False)
     status                  = Column(String(20), default="pending")
     onboarding_complete     = Column(Boolean, default=False)
     role                    = Column(String(20), default="athlete")

@@ -24,11 +24,6 @@ def compute_current_day(start_date: Optional[date]) -> Optional[int]:
     return max(1, delta)
 
 
-def _compute_injury_return(user) -> bool:
-    """Mirrors detect_after_break_mode() from run_bot/engine/level_assignment.py."""
-    return user.level in (2, 3) and getattr(user, "q_break_duration", None) in ("3_6m", "6plus")
-
-
 @router.get("", response_model=UserListResponse)
 async def list_users(
     search: Optional[str] = Query(None),
@@ -78,7 +73,7 @@ async def list_users(
             week_repeat_count=u.week_repeat_count,
             created_at=u.created_at,
             current_day=compute_current_day(u.program_start_date),
-            injury_return_active=_compute_injury_return(u),
+            injury_return_active=bool(getattr(u, 'injury_return_active', False)),
         ))
 
     return UserListResponse(items=items, total=total, page=page, pages=pages)
@@ -236,7 +231,23 @@ async def reset_onboarding(
     user.week_repeat_count = 0
     user.level = None
     user.strength_format = None
+    user.injury_return_active = False
     for field in _ONBOARDING_FIELDS:
         setattr(user, field, None)
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/{user_id}/clear-return-mode")
+async def clear_return_mode(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    user.injury_return_active = False
     await db.commit()
     return {"ok": True}
