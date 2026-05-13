@@ -25,6 +25,8 @@ class UserListItem(BaseModel):
     created_at: Optional[datetime] = None
     current_day: Optional[int] = None
     injury_return_active: Optional[bool] = None
+    current_period: Optional[str] = None
+    program_week_number: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
@@ -48,7 +50,6 @@ class UserDetail(BaseModel):
     status: Optional[str] = None
     onboarding_complete: Optional[bool] = None
     created_at: Optional[datetime] = None
-    injury_return_active: Optional[bool] = None
     q_goal: Optional[str] = None
     q_runs: Optional[str] = None
     q_frequency: Optional[str] = None
@@ -70,6 +71,10 @@ class UserDetail(BaseModel):
     q_self_level: Optional[str] = None
     q_distance: Optional[str] = None
     q_race_date: Optional[str] = None
+    q_continuous_run_test: Optional[str] = None
+    q_gadget: Optional[str] = None
+    q_gadget_types: Optional[str] = None
+    q_gadget_sharing: Optional[str] = None
     # Extra user fields
     role: Optional[str] = None
     is_active: Optional[bool] = None
@@ -77,6 +82,33 @@ class UserDetail(BaseModel):
     morning_reminder_hour: Optional[int] = None
     evening_reminder_hour: Optional[int] = None
     extended_week5: Optional[bool] = None
+    # New program state (new_logic branch)
+    available_weekdays: Optional[str] = None
+    weekly_target_minutes: Optional[int] = None
+    peak_volume_minutes: Optional[int] = None
+    last_successful_volume: Optional[int] = None
+    current_period: Optional[str] = None
+    period_start_date: Optional[Date] = None
+    period_week_number: Optional[int] = None
+    cycle_number: Optional[int] = None
+    cycle_start_date: Optional[Date] = None
+    program_week_number: Optional[int] = None
+    growth_streak: Optional[int] = None
+    weeks_since_recovery: Optional[int] = None
+    red_flag_active: Optional[bool] = None
+    red_flag_reason: Optional[str] = None
+    red_flag_at: Optional[Date] = None
+    has_goal_race: Optional[bool] = None
+    entry_point: Optional[str] = None
+    injury_return_active: Optional[bool] = None
+    target_level: Optional[int] = None
+    return_mode_started_at: Optional[Date] = None
+    in_macrocycle_recovery: Optional[bool] = None
+    macrocycle_recovery_week: Optional[int] = None
+    macrocycle_peak_volume: Optional[int] = None
+    l1_long_independent: Optional[bool] = None
+    l1_no_pain_streak_weeks: Optional[int] = None
+    l1_easy_reached_40min: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 
@@ -142,6 +174,14 @@ class SessionLogItem(BaseModel):
     created_at: Optional[datetime] = None
     calendar_day: Optional[int] = None
     workout: Optional[WorkoutInfo] = None
+    # New
+    week_plan_id: Optional[int] = None
+    day_plan_id: Optional[int] = None
+    day_of_week: Optional[int] = None
+    planned_minutes: Optional[int] = None
+    coach_override: Optional[bool] = None
+    recheckin_count: Optional[int] = None
+    absence_reason: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -200,3 +240,25 @@ class LevelAnalytics(BaseModel):
     active: int
     avg_completion: float
     avg_day: float
+
+
+class ScoreBreakdown(BaseModel):
+    base: int
+    frequency: int
+    volume: int
+    structure: int
+    break_penalty: int
+    pain_penalty: int
+    total: int
+
+
+class RecalcLevelResponse(BaseModel):
+    level: int
+    entry_point: str
+    injury_return: bool
+    has_goal_race: bool
+    starting_volume_min: int
+    initial_period: str
+    hard_stop: Optional[str] = None
+    score: Optional[int] = None
+    score_breakdown: Optional[ScoreBreakdown] = None
