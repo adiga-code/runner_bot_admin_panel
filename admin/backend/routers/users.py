@@ -139,7 +139,6 @@ def _calc_level_from_user(user) -> dict:
     }
 
 
-@router.get("", response_model=UserListResponse)
 _SORT_COLUMNS = {
     "created_at": models.User.created_at,
     "level": models.User.level,
@@ -147,6 +146,7 @@ _SORT_COLUMNS = {
     "program_start_date": models.User.program_start_date,
 }
 
+@router.get("", response_model=UserListResponse)
 async def list_users(
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
