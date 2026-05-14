@@ -130,6 +130,9 @@ def _split_running_minutes(
         if n_other >= 2:
             rec_min = L2_RECOVERY_RUN_MINUTES
             aerobic_min = _round_int((remaining - rec_min) / (n_other - 1))
+            if aerobic_min < rec_min:
+                aerobic_min = _round_int(remaining / n_other)
+                return {"long": long, "easy": aerobic_min, "aerobic": 0, "recovery_run": 0}
             return {"long": long, "easy": 0, "aerobic": aerobic_min, "recovery_run": rec_min}
         return {"long": long, "easy": 0, "aerobic": per_other, "recovery_run": 0}
 
@@ -168,6 +171,14 @@ def _layout_days(
     run_subtypes: list = []
     if level == 1:
         run_subtypes = ["easy"] * (n_run_total - 1)
+    elif level == 2 or (level == 3 and injury_return):
+        other_run = n_run_total - 1
+        if other_run > 0 and minutes.get("recovery_run", 0) > 0:
+            run_subtypes = ["recovery_run"] + ["aerobic"] * max(0, other_run - 1)
+        elif minutes.get("easy", 0) > 0:
+            run_subtypes = ["easy"] * other_run
+        else:
+            run_subtypes = ["aerobic"] * other_run
     else:
         other_run = n_run_total - 1
         if other_run > 0 and minutes.get("recovery_run", 0) > 0:
@@ -188,15 +199,39 @@ def _layout_days(
 
     strength_days: list = []
     run_days: list = []
+    last_run_day = None
 
-    for day in other_days:
-        would_be_consecutive = strength_days and day == strength_days[-1] + 1
-        if (len(strength_days) < n_strength
-                and day not in forbidden_strength
-                and not would_be_consecutive):
+    for i, day in enumerate(other_days):
+        days_remaining = len(other_days) - i
+        strength_still_needed = n_strength - len(strength_days)
+        run_still_needed = (n_run_total - 1) - len(run_days)
+
+        would_be_consecutive_strength = bool(strength_days) and day == strength_days[-1] + 1
+        would_be_consecutive_run = last_run_day is not None and day == last_run_day + 1
+
+        can_be_strength = (
+            strength_still_needed > 0
+            and day not in forbidden_strength
+            and not would_be_consecutive_strength
+        )
+        can_be_run_ideal = run_still_needed > 0 and not would_be_consecutive_run
+        must_be_run = run_still_needed > 0 and days_remaining <= run_still_needed
+
+        if must_be_run and strength_still_needed == 0:
+            run_days.append(day); last_run_day = day
+        elif can_be_strength and can_be_run_ideal:
+            if strength_still_needed >= run_still_needed:
+                strength_days.append(day)
+            else:
+                run_days.append(day); last_run_day = day
+        elif can_be_strength:
+            strength_days.append(day)
+        elif can_be_run_ideal:
+            run_days.append(day); last_run_day = day
+        elif strength_still_needed > 0 and day not in forbidden_strength:
             strength_days.append(day)
         else:
-            run_days.append(day)
+            run_days.append(day); last_run_day = day
 
     while len(strength_days) < n_strength and run_days:
         strength_days.append(run_days.pop(0))
