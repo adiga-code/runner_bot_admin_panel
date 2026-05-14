@@ -26,6 +26,8 @@ class UserListItem(BaseModel):
     current_day: Optional[int] = None
     current_period: Optional[str] = None
     program_week_number: Optional[int] = None
+    onboarding_complete: Optional[bool] = None
+    injury_return_active: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 

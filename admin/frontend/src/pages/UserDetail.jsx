@@ -49,8 +49,9 @@ const ENTRY_LABELS = { base_in:'Base-In (с нуля)', base:'Base (с базы)
 const ABSENCE_REASON = { tired:'Устал', sick:'Болен', no_time:'Нет времени', motivation:'Нет мотивации', weather:'Погода', other:'Другое' }
 const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
 const RUN_SUBTYPE = {
-  easy:'Лёгкий', tempo:'Темповый', interval:'Интервальный',
-  long:'Длительный', fartlek:'Фартлек', race:'Гонка',
+  easy:'Лёгкий', aerobic:'Аэробный', recovery_run:'Восстановит.',
+  long:'Длительный', run_walk:'Шаг-бег', tempo:'Темповый',
+  intervals:'Интервалы', interval:'Интервальный', fartlek:'Фартлек', race:'Гонка',
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
