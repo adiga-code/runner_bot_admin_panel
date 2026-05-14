@@ -488,13 +488,23 @@ async def delete_week_plan(
     if not wp:
         raise HTTPException(status_code=404, detail="WeekPlan не найден")
 
-    # Обнуляем session_log_id у day_plans чтобы снять FK
+    # Снимаем FK: session_logs.day_plan_id / week_plan_id → перед удалением
+    day_plan_ids = [dp.id for dp in wp.days]
+    if day_plan_ids:
+        await db.execute(
+            update(models.SessionLog)
+            .where(models.SessionLog.day_plan_id.in_(day_plan_ids))
+            .values(day_plan_id=None)
+        )
+    await db.execute(
+        update(models.SessionLog)
+        .where(models.SessionLog.week_plan_id == week_plan_id)
+        .values(week_plan_id=None)
+    )
     for dp in wp.days:
-        if dp.session_log_id is not None:
-            dp.session_log_id = None
+        dp.session_log_id = None
     await db.flush()
 
-    # Удаляем day_plans
     await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
     await db.delete(wp)
     await db.commit()
@@ -535,11 +545,25 @@ async def recalculate_week_plan(
     is_recovery = wp.is_recovery_week
     is_rollback = wp.is_rollback_week
 
-    # Удаляем старый план
+    # Снимаем FK ссылки session_logs → day_plans / week_plans перед удалением
+    day_plan_ids = [dp.id for dp in wp.days]
+    if day_plan_ids:
+        await db.execute(
+            update(models.SessionLog)
+            .where(models.SessionLog.day_plan_id.in_(day_plan_ids))
+            .values(day_plan_id=None)
+        )
+    await db.execute(
+        update(models.SessionLog)
+        .where(models.SessionLog.week_plan_id == week_plan_id)
+        .values(week_plan_id=None)
+    )
+    # Снимаем FK day_plan → session_log
     for dp in wp.days:
-        if dp.session_log_id is not None:
-            dp.session_log_id = None
+        dp.session_log_id = None
     await db.flush()
+
+    # Удаляем старый план
     await db.execute(delete(models.DayPlan).where(models.DayPlan.week_plan_id == week_plan_id))
     await db.delete(wp)
     await db.flush()
