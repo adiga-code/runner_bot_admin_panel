@@ -27,6 +27,7 @@ class UserListItem(BaseModel):
     current_period: Optional[str] = None
     program_week_number: Optional[int] = None
     injury_return_active: Optional[bool] = None
+    onboarding_complete: Optional[bool] = None
 
     model_config = {"from_attributes": True}
 
@@ -82,7 +83,7 @@ class UserDetail(BaseModel):
     morning_reminder_hour: Optional[int] = None
     evening_reminder_hour: Optional[int] = None
     extended_week5: Optional[bool] = None
-    # New program state (new_logic branch)
+    # New program state
     available_weekdays: Optional[str] = None
     weekly_target_minutes: Optional[int] = None
     peak_volume_minutes: Optional[int] = None
@@ -174,7 +175,6 @@ class SessionLogItem(BaseModel):
     created_at: Optional[datetime] = None
     calendar_day: Optional[int] = None
     workout: Optional[WorkoutInfo] = None
-    # New
     week_plan_id: Optional[int] = None
     day_plan_id: Optional[int] = None
     day_of_week: Optional[int] = None
