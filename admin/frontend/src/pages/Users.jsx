@@ -37,6 +37,11 @@ function Avatar({ name }) {
   )
 }
 
+function SortIcon({ col, sortBy, sortDir }) {
+  if (sortBy !== col) return <span className="ml-1 text-gray-400 text-xs">⇅</span>
+  return <span className="ml-1 text-violet-600 text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span>
+}
+
 function SkeletonRow({ cols }) {
   return (
     <tr className="border-b border-gray-100">
@@ -74,6 +79,8 @@ export default function Users() {
   const [status, setStatus] = useState('')
   const [level, setLevel] = useState('')
   const [page, setPage] = useState(1)
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortDir, setSortDir] = useState('desc')
 
   // selection
   const [selected, setSelected] = useState(new Set())
@@ -87,7 +94,7 @@ export default function Users() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const params = { page, per_page: 25 }
+      const params = { page, per_page: 25, sort_by: sortBy, sort_dir: sortDir }
       if (search) params.search = search
       if (status) params.status = status
       if (level) params.level = level
@@ -98,11 +105,21 @@ export default function Users() {
     } finally {
       setLoading(false)
     }
-  }, [page, search, status, level])
+  }, [page, search, status, level, sortBy, sortDir])
 
   useEffect(() => { load() }, [load])
   // clear selection on page/filter change
   useEffect(() => { setSelected(new Set()) }, [page, search, status, level])
+
+  function toggleSort(col) {
+    if (sortBy === col) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(col)
+      setSortDir('desc')
+    }
+    setPage(1)
+  }
 
   function handleSearch(e) { setSearch(e.target.value); setPage(1) }
 
@@ -204,11 +221,21 @@ export default function Users() {
                   onClick={toggleAll}
                 />
               </th>
-              {['Пользователь', 'Уровень', 'Статус', 'Прогресс', 'Период / Старт', 'Повторов', 'Создан'].map(h => (
-                <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  {h}
-                </th>
-              ))}
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Пользователь</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort('level')}>
+                Уровень<SortIcon col="level" sortBy={sortBy} sortDir={sortDir} />
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort('status')}>
+                Статус<SortIcon col="status" sortBy={sortBy} sortDir={sortDir} />
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Прогресс</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort('program_start_date')}>
+                Период / Старт<SortIcon col="program_start_date" sortBy={sortBy} sortDir={sortDir} />
+              </th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Повторов</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none hover:text-gray-700" onClick={() => toggleSort('created_at')}>
+                Создан<SortIcon col="created_at" sortBy={sortBy} sortDir={sortDir} />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -246,10 +273,22 @@ export default function Users() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {u.level ? <Badge value="default" label={`L${u.level} ${LEVELS[u.level] || ''}`} /> : '—'}
+                        <div className="flex flex-col gap-1">
+                          {u.level ? <Badge value="default" label={`L${u.level} ${LEVELS[u.level] || ''}`} /> : '—'}
+                          {u.injury_return_active && (
+                            <span className="inline-flex px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">Возврат</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        {u.status ? <Badge value={u.status} label={STATUS_LABELS[u.status] || u.status} /> : '—'}
+                        <div className="flex flex-col gap-1">
+                          {u.status ? <Badge value={u.status} label={STATUS_LABELS[u.status] || u.status} /> : '—'}
+                          {u.status === 'pending' && (
+                            u.onboarding_complete
+                              ? <span className="inline-flex px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">Готов к старту</span>
+                              : <span className="inline-flex px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs font-medium">Анкета</span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-700">
                         {u.current_period

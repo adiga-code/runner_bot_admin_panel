@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, or_, delete, update
+from sqlalchemy import select, func, or_, delete, update, asc, desc
 from datetime import date, timedelta
 from typing import Optional, List
 from pydantic import BaseModel
@@ -140,12 +140,21 @@ def _calc_level_from_user(user) -> dict:
 
 
 @router.get("", response_model=UserListResponse)
+_SORT_COLUMNS = {
+    "created_at": models.User.created_at,
+    "level": models.User.level,
+    "status": models.User.status,
+    "program_start_date": models.User.program_start_date,
+}
+
 async def list_users(
     search: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     level: Optional[int] = Query(None),
     page: int = Query(1, ge=1),
     per_page: int = Query(25, ge=1, le=100),
+    sort_by: str = Query("created_at"),
+    sort_dir: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
     _: str = Depends(get_current_user),
 ):
@@ -167,6 +176,10 @@ async def list_users(
     count_stmt = select(func.count()).select_from(stmt.subquery())
     total_result = await db.execute(count_stmt)
     total = total_result.scalar_one()
+
+    sort_col = _SORT_COLUMNS.get(sort_by, models.User.created_at)
+    order_fn = asc if sort_dir == "asc" else desc
+    stmt = stmt.order_by(order_fn(sort_col).nullslast())
 
     stmt = stmt.offset((page - 1) * per_page).limit(per_page)
     result = await db.execute(stmt)
@@ -190,6 +203,8 @@ async def list_users(
             current_day=compute_current_day(u.program_start_date),
             current_period=u.current_period,
             program_week_number=u.program_week_number,
+            onboarding_complete=u.onboarding_complete,
+            injury_return_active=u.injury_return_active,
         ))
 
     return UserListResponse(items=items, total=total, page=page, pages=pages)
