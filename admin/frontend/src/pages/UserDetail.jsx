@@ -1099,6 +1099,149 @@ function CheckinsTab({ logs = [] }) {
   )
 }
 
+// ─── Payments Tab ─────────────────────────────────────────────────────────────
+const PLAN_LABELS = { monthly: 'Месяц', annual: 'Год' }
+const SUB_LABELS  = { trial: 'Триал', monthly: 'Месяц', annual: 'Год', ambassador: 'Амбассадор', free: 'Бесплатно', expired: 'Истёк' }
+const STATUS_PAY  = { pending: ['Ожидает', 'yellow'], succeeded: ['Оплачен', 'green'], canceled: ['Отменён', 'red'] }
+
+function PaymentsTab({ userId, user, onReload }) {
+  const toast = useToast()
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState('')
+  const [acting, setActing] = useState(false)
+
+  useEffect(() => {
+    api.get(`/payments/user/${userId}`)
+      .then(r => setPayments(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [userId])
+
+  async function addDays() {
+    const n = parseInt(days)
+    if (!n || n < 1) return
+    setActing(true)
+    try {
+      await api.post(`/payments/user/${userId}/add-days`, { days: n })
+      toast(`Добавлено ${n} дней`)
+      setDays('')
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setActing(false)
+  }
+
+  async function setAmbassador() {
+    setActing(true)
+    try {
+      await api.post(`/payments/user/${userId}/set-ambassador`)
+      toast('Статус амбассадора установлен')
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setActing(false)
+  }
+
+  const subType = user?.subscription_type || '—'
+  const accessUntil = user?.access_until ? user.access_until.split('T')[0].split('-').reverse().join('.') : '—'
+  const trialStarted = user?.trial_started_at ? user.trial_started_at.split('T')[0].split('-').reverse().join('.') : '—'
+
+  return (
+    <div className="space-y-6">
+      {/* Current access */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Доступ</h3>
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="text-gray-500 mb-1">Тип подписки</div>
+            <div className="font-medium">{SUB_LABELS[subType] || subType}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Доступ до</div>
+            <div className="font-medium">{subType === 'ambassador' ? '∞' : accessUntil}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Триал начат</div>
+            <div className="font-medium">{trialStarted}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin controls */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Управление доступом</h3>
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={days}
+              onChange={e => setDays(e.target.value)}
+              placeholder="Дней"
+              className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <button
+              onClick={addDays}
+              disabled={acting || !days}
+              className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors"
+            >
+              Добавить дни
+            </button>
+          </div>
+          <button
+            onClick={setAmbassador}
+            disabled={acting || subType === 'ambassador'}
+            className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+          >
+            🎁 Амбассадор
+          </button>
+        </div>
+      </div>
+
+      {/* Payment history */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">История платежей</h3>
+        </div>
+        {loading ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Загрузка…</div>
+        ) : payments.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Платежей нет</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left">Дата</th>
+                <th className="px-5 py-3 text-left">План</th>
+                <th className="px-5 py-3 text-left">Сумма</th>
+                <th className="px-5 py-3 text-left">Статус</th>
+                <th className="px-5 py-3 text-left">Подтверждён</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map(p => {
+                const [label, color] = STATUS_PAY[p.status] || [p.status, 'gray']
+                const colorMap = { green: 'bg-green-100 text-green-700', yellow: 'bg-yellow-100 text-yellow-700', red: 'bg-red-100 text-red-700', gray: 'bg-gray-100 text-gray-500' }
+                return (
+                  <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-3 text-gray-600">{p.created_at ? p.created_at.split('T')[0].split('-').reverse().join('.') : '—'}</td>
+                    <td className="px-5 py-3">{PLAN_LABELS[p.plan_type] || p.plan_type}</td>
+                    <td className="px-5 py-3 font-medium">{p.amount} ₽</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[color]}`}>{label}</span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">{p.confirmed_at ? p.confirmed_at.split('T')[0].split('-').reverse().join('.') : '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function UserDetail() {
   const { id } = useParams()
@@ -1227,6 +1370,7 @@ export default function UserDetail() {
     ['progress', 'Прогресс'],
     ['checkins', 'Чекины'],
     ...(isNewLogic ? [['weeks', 'Недели']] : []),
+    ['payments', '💳 Платежи'],
     ['testing', '🧪 Тест'],
   ]
 
@@ -1323,6 +1467,7 @@ export default function UserDetail() {
       {tab === 'progress' && <ProgressTab logs={logs} onReload={load} />}
       {tab === 'checkins' && <CheckinsTab logs={logs} />}
       {tab === 'weeks'    && <WeekPlanTab userId={id} />}
+      {tab === 'payments' && <PaymentsTab userId={id} user={user} onReload={load} />}
       {tab === 'testing'  && <TestingTab userId={id} logs={logs} onReload={load} isNewLogic={isNewLogic} />}
 
       {/* Level modal */}
