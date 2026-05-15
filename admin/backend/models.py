@@ -106,8 +106,14 @@ class User(Base):
     l1_no_pain_streak_weeks = Column(Integer, default=0)
     l1_easy_reached_40min   = Column(Boolean, default=False)
 
+    # Payment fields
+    trial_started_at         = Column(DateTime(timezone=True))
+    access_until             = Column(Date)
+    subscription_type        = Column(String(20), default="trial")
+
     logs       = relationship("SessionLog", back_populates="user")
     week_plans = relationship("WeekPlan", back_populates="user")
+    payments   = relationship("Payment", back_populates="user")
 
 
 class WorkoutTemplate(Base):
@@ -259,3 +265,19 @@ class Whitelist(Base):
     added_by    = Column(BigInteger, nullable=False)
     note        = Column(String(500))
     created_at  = Column(DateTime(timezone=True))
+
+
+class Payment(Base):
+    __tablename__ = "payments"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    user_id      = Column(BigInteger, ForeignKey("users.telegram_id"), nullable=False)
+    yookassa_id  = Column(String(100), unique=True)
+    amount       = Column(Integer, nullable=False)
+    plan_type    = Column(String(20), nullable=False)
+    status       = Column(String(20), default="pending")
+    payment_url  = Column(Text)
+    created_at   = Column(DateTime(timezone=True))
+    confirmed_at = Column(DateTime(timezone=True))
+
+    user = relationship("User", back_populates="payments")
