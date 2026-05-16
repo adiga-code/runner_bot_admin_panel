@@ -91,12 +91,30 @@ def _get_level_key(level: int, injury_return: bool) -> str:
     return "L3_REGULAR"
 
 
+_IDEAL_RUN_DAYS = {
+    "l1": 3,
+    "l2": 3,
+    "l3": 5,
+}
+_MAX_STRENGTH_DAYS = 2
+
+
+def _run_strength_split(level: int, injury_return: bool, n: int) -> tuple:
+    """Run-first: беговые дни по уровню, силовые — из остатка (макс. 2)."""
+    if level == 3 and not injury_return:
+        ideal_run = _IDEAL_RUN_DAYS["l3"]
+    elif level == 1:
+        ideal_run = _IDEAL_RUN_DAYS["l1"]
+    else:
+        ideal_run = _IDEAL_RUN_DAYS["l2"]
+    n_run_total = max(1, min(ideal_run, n))
+    n_strength = min(_MAX_STRENGTH_DAYS, max(0, n - n_run_total))
+    return n_run_total, n_strength
+
+
 def _count_run_days(level: int, period: str, injury_return: bool, n_total: int) -> int:
-    if level == 1:
-        return min(n_total, 3)
-    if level == 2 or (level == 3 and injury_return):
-        return min(n_total - 1, 4)
-    return min(n_total - 2, 5)
+    n_run_total, _ = _run_strength_split(level, injury_return, n_total)
+    return n_run_total
 
 
 def _split_running_minutes(
@@ -153,12 +171,7 @@ def _layout_days(
     strength_min = _get_strength_minutes(level, period, injury_return)
     level_key = _get_level_key(level, injury_return)
 
-    if level == 3 and not injury_return:
-        n_strength = 2
-    else:
-        n_strength = 2 if n >= 5 else 1
-
-    n_run_total = max(1, n - n_strength)
+    n_run_total, n_strength = _run_strength_split(level, injury_return, n)
 
     long_day = available[-1]
     slots[long_day] = DaySlot(
