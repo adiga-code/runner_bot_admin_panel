@@ -205,6 +205,20 @@ async def list_users(
             program_week_number=u.program_week_number,
             onboarding_complete=u.onboarding_complete,
             injury_return_active=u.injury_return_active,
+            city=u.city,
+            q_goal=u.q_goal,
+            q_runs=u.q_runs,
+            q_frequency=u.q_frequency,
+            q_volume=u.q_volume,
+            q_longest_run=u.q_longest_run,
+            q_break=u.q_break,
+            q_break_duration=u.q_break_duration,
+            q_pain=u.q_pain,
+            q_injury_history=u.q_injury_history,
+            q_structure=u.q_structure,
+            q_distance=u.q_distance,
+            q_race_date=u.q_race_date,
+            q_self_level=u.q_self_level,
         ))
 
     return UserListResponse(items=items, total=total, page=page, pages=pages)
@@ -974,3 +988,138 @@ async def delete_user(
     await db.delete(user)
     await db.commit()
     return {"ok": True}
+
+
+# ── Pending users: trial/payment activation ────────────────────────────────────
+
+import os
+import httpx as _httpx
+
+_BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+_PLAN_PRICES = {"monthly": 1990, "annual": 14990}
+
+
+async def _send_tg_with_keyboard(chat_id: int, text: str, reply_markup: dict) -> bool:
+    if not _BOT_TOKEN:
+        return False
+    url = f"https://api.telegram.org/bot{_BOT_TOKEN}/sendMessage"
+    try:
+        async with _httpx.AsyncClient(timeout=10) as client:
+            resp = await client.post(url, json={
+                "chat_id": chat_id,
+                "text": text,
+                "parse_mode": "HTML",
+                "reply_markup": reply_markup,
+            })
+            return resp.status_code == 200
+    except Exception:
+        return False
+
+
+class ActivateWithAccessRequest(BaseModel):
+    level: int
+    start_date: date
+    give_trial: bool  # True = trial, False = invite to payment
+
+
+@router.post("/{user_id}/activate-with-access")
+async def activate_with_access(
+    user_id: int,
+    body: ActivateWithAccessRequest,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    from datetime import datetime, timezone
+    from week_planner import build_week_plan, parse_available_weekdays
+
+    result = await db.execute(select(models.User).where(models.User.telegram_id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    LEVEL_NAMES = {1: "Start", 2: "Return", 3: "Base", 4: "Stability", 5: "Performance"}
+    level_name = LEVEL_NAMES.get(body.level, str(body.level))
+    start_label = body.start_date.strftime("%d.%m.%Y")
+
+    if body.give_trial:
+        # Activate with trial
+        user.level = body.level
+        user.status = "active"
+        user.program_start_date = body.start_date
+        user.program_week_number = 1
+        user.trial_started_at = datetime.now(timezone.utc)
+        user.subscription_type = "trial"
+        await db.flush()
+
+        if user.level <= 3 and user.current_period is not None:
+            monday = body.start_date - timedelta(days=body.start_date.weekday())
+            week_start = monday if monday >= body.start_date else monday + timedelta(weeks=1)
+            available = parse_available_weekdays(user.available_weekdays)
+            blueprint = build_week_plan(
+                user=user,
+                week_number=1,
+                period=user.current_period,
+                target_minutes=user.weekly_target_minutes or 60,
+                is_recovery_week=False,
+                available_weekdays=available,
+            )
+            week_plan = models.WeekPlan(
+                user_id=user.telegram_id,
+                week_number=1,
+                cycle_number=user.cycle_number or 1,
+                period=user.current_period,
+                period_week_number=1,
+                start_date=week_start,
+                end_date=week_start + timedelta(days=6),
+                weekly_target_minutes=user.weekly_target_minutes or 60,
+                is_recovery_week=False,
+                is_rollback_week=False,
+            )
+            db.add(week_plan)
+            await db.flush()
+            for slot in blueprint.days:
+                db.add(models.DayPlan(
+                    week_plan_id=week_plan.id,
+                    day_of_week=slot.day_of_week,
+                    day_type=slot.day_type,
+                    run_subtype=slot.run_subtype,
+                    planned_minutes=slot.planned_minutes,
+                    intensity=slot.intensity,
+                    is_key=slot.is_key,
+                ))
+
+        await db.commit()
+
+        sent = await _send_tg_with_keyboard(
+            chat_id=user_id,
+            text=(
+                "Сейчас вам доступны 10 бесплатных дней нашей платформы.\n\n"
+                "Заполняй чекины, получай тренировки на основании своего самочувствия, "
+                "прогрессируй в удовольствие и без надрыва.\n\n"
+                "Добро пожаловать в Культуру Движения ❤️"
+            ),
+            reply_markup={
+                "keyboard": [[{"text": "🏠 Главное меню"}]],
+                "resize_keyboard": True,
+            },
+        )
+        return {"ok": True, "mode": "trial", "sent_telegram": sent}
+
+    else:
+        # Just set level, keep status=pending, send payment invite
+        user.level = body.level
+        await db.commit()
+
+        invite_text = (
+            "Добро пожаловать в Культуру Движения ❤️\n\n"
+            "Мы подготовили для тебя программу тренировок.\n\n"
+            f"Месяц подключения к нашей платформе стоит <b>{_PLAN_PRICES['monthly']} рублей</b>, "
+            f"а на год можно подключиться со скидкой в 40% — <b>{_PLAN_PRICES['annual']} рублей</b>.\n\n"
+            "Какой вариант выбираете?"
+        )
+        keyboard = {"inline_keyboard": [
+            [{"text": f"📅 Месяц — {_PLAN_PRICES['monthly']} ₽ (28 дней)", "callback_data": "pay:plan:monthly"}],
+            [{"text": f"🔥 Год — {_PLAN_PRICES['annual']} ₽ (365 дней)", "callback_data": "pay:plan:annual"}],
+        ]}
+        sent = await _send_tg_with_keyboard(user_id, invite_text, keyboard)
+        return {"ok": True, "mode": "payment_invite", "sent_telegram": sent}
