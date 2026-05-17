@@ -291,9 +291,23 @@ class Material(Base):
     description = Column(Text)
     category    = Column(String(20), nullable=False, default="free")
     price_label = Column(String(100))
+    price_rub   = Column(Integer)
     file_id     = Column(String(500), nullable=False)
     file_name   = Column(String(300))
     file_type   = Column(String(50))
     sort_order  = Column(Integer, default=0)
     is_active   = Column(Boolean, default=True)
     created_at  = Column(DateTime(timezone=True))
+
+
+class MaterialPurchase(Base):
+    __tablename__ = "material_purchases"
+
+    id           = Column(Integer, primary_key=True, autoincrement=True)
+    user_id      = Column(BigInteger, ForeignKey("users.telegram_id"), nullable=False)
+    material_id  = Column(Integer, ForeignKey("materials.id"), nullable=False)
+    yookassa_id  = Column(String(100), unique=True)
+    amount       = Column(Integer, nullable=False)
+    status       = Column(String(20), nullable=False, default="pending")
+    created_at   = Column(DateTime(timezone=True))
+    confirmed_at = Column(DateTime(timezone=True))
