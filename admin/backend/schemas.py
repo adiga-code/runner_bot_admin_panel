@@ -28,6 +28,20 @@ class UserListItem(BaseModel):
     program_week_number: Optional[int] = None
     onboarding_complete: Optional[bool] = None
     injury_return_active: Optional[bool] = None
+    city: Optional[str] = None
+    q_goal: Optional[str] = None
+    q_runs: Optional[str] = None
+    q_frequency: Optional[str] = None
+    q_volume: Optional[str] = None
+    q_longest_run: Optional[str] = None
+    q_break: Optional[str] = None
+    q_break_duration: Optional[str] = None
+    q_pain: Optional[str] = None
+    q_injury_history: Optional[str] = None
+    q_structure: Optional[str] = None
+    q_distance: Optional[str] = None
+    q_race_date: Optional[str] = None
+    q_self_level: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
