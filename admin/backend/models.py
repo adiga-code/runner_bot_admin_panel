@@ -281,3 +281,19 @@ class Payment(Base):
     confirmed_at = Column(DateTime(timezone=True))
 
     user = relationship("User", back_populates="payments")
+
+
+class Material(Base):
+    __tablename__ = "materials"
+
+    id          = Column(Integer, primary_key=True, autoincrement=True)
+    title       = Column(String(300), nullable=False)
+    description = Column(Text)
+    category    = Column(String(20), nullable=False, default="free")
+    price_label = Column(String(100))
+    file_id     = Column(String(500), nullable=False)
+    file_name   = Column(String(300))
+    file_type   = Column(String(50))
+    sort_order  = Column(Integer, default=0)
+    is_active   = Column(Boolean, default=True)
+    created_at  = Column(DateTime(timezone=True))
