@@ -13,6 +13,7 @@ from routers.analytics import router as analytics_router
 from routers.approvals import router as approvals_router
 from routers.workout_templates import router as workout_templates_router
 from routers.payments import router as payments_router
+from routers.materials import router as materials_router
 
 app = FastAPI(title="28 Days Admin API", version="1.0.0")
 
@@ -38,6 +39,7 @@ app.include_router(workout_templates_router, prefix="/api/workout-templates", ta
 app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(approvals_router, prefix="/api", tags=["approvals"])
 app.include_router(payments_router, prefix="/api/payments", tags=["payments"])
+app.include_router(materials_router, prefix="/api/materials", tags=["materials"])
 
 
 @app.get("/api/health")
