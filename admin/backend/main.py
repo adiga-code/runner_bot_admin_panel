@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from dependencies import engine, Base
 from auth import router as auth_router
 from routers.users import router as users_router
 from routers.logs import router as logs_router
@@ -16,6 +17,7 @@ from routers.approvals import router as approvals_router
 from routers.workout_templates import router as workout_templates_router
 from routers.payments import router as payments_router
 from routers.materials import router as materials_router
+import models  # ensure all models are registered before create_all
 
 app = FastAPI(title="28 Days Admin API", version="1.0.0")
 
@@ -46,6 +48,12 @@ app.include_router(analytics_router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(approvals_router, prefix="/api", tags=["approvals"])
 app.include_router(payments_router, prefix="/api/payments", tags=["payments"])
 app.include_router(materials_router, prefix="/api/materials", tags=["materials"])
+
+
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 
 @app.get("/api/health")
