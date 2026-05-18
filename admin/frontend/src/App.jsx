@@ -5,7 +5,10 @@ import Layout from './components/Layout'
 import Users from './pages/Users'
 import UserDetail from './pages/UserDetail'
 import Workouts from './pages/Workouts'
+import WorkoutTemplates from './pages/WorkoutTemplates'
 import Analytics from './pages/Analytics'
+import Approvals from './pages/Approvals'
+import PendingUsers from './pages/PendingUsers'
 import Materials from './pages/Materials'
 
 function PrivateRoute({ children }) {
@@ -28,12 +31,15 @@ export default function App() {
               </PrivateRoute>
             }
           >
-            <Route index element={<Navigate to="/users" replace />} />
+            <Route index element={<Navigate to="/pending" replace />} />
+            <Route path="pending" element={<PendingUsers />} />
+            <Route path="approvals" element={<Approvals />} />
             <Route path="users" element={<Users />} />
             <Route path="users/:id" element={<UserDetail />} />
-            <Route path="workouts" element={<Workouts />} />
-            <Route path="analytics" element={<Analytics />} />
             <Route path="materials" element={<Materials />} />
+            <Route path="workouts" element={<Workouts />} />
+            <Route path="workout-templates" element={<WorkoutTemplates />} />
+            <Route path="analytics" element={<Analytics />} />
           </Route>
         </Routes>
       </BrowserRouter>
