@@ -67,6 +67,13 @@ async def get_user_logs(
             created_at=log.created_at,
             calendar_day=calendar_day,
             workout=workout,
+            week_plan_id=getattr(log, 'week_plan_id', None),
+            day_plan_id=getattr(log, 'day_plan_id', None),
+            day_of_week=getattr(log, 'day_of_week', None),
+            planned_minutes=getattr(log, 'planned_minutes', None),
+            coach_override=getattr(log, 'coach_override', None),
+            recheckin_count=getattr(log, 'recheckin_count', None),
+            absence_reason=getattr(log, 'absence_reason', None),
         ))
 
     return items
@@ -105,5 +112,32 @@ async def update_log_completion(
     if not log:
         raise HTTPException(status_code=404, detail="Лог не найден")
     log.completion_status = body.completion_status
+    await db.commit()
+    return {"ok": True}
+
+
+@router.post("/logs/{log_id}/reset-checkin")
+async def reset_checkin(
+    log_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    result = await db.execute(select(models.SessionLog).where(models.SessionLog.id == log_id))
+    log = result.scalar_one_or_none()
+    if not log:
+        raise HTTPException(status_code=404, detail="Лог не найден")
+    log.wellbeing = None
+    log.sleep_quality = None
+    log.pain_level = None
+    log.pain_increases = None
+    log.stress_level = None
+    log.checkin_done = False
+    log.checkin_at = None
+    log.assigned_version = None
+    log.assigned_workout_id = None
+    log.approval_pending = False
+    log.red_flag = False
+    log.fatigue_reduction = False
+    log.morning_sent = False
     await db.commit()
     return {"ok": True}

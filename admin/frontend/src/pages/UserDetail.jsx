@@ -7,25 +7,26 @@ import Modal from '../components/Modal'
 import { useToast } from '../components/Toast'
 
 // ─── Dictionaries ────────────────────────────────────────────────────────────
-const LEVELS      = { 1:'Start', 2:'Return', 3:'Base', 4:'Stability' }
-const STATUS_LABELS = { active:'Активен', pending:'Ожидает' }
+const LEVELS      = { 1:'Start', 2:'Return', 3:'Base', 4:'Stability', 5:'Performance' }
+const STATUS_LABELS = { active:'Активен', pending:'Ожидает', paused:'Пауза' }
 const WELLBEING   = { 1:'😞 Плохо', 2:'😤 Тяжеловато', 3:'😐 Нормально', 4:'😊 Хорошо', 5:'🤩 Отлично' }
 const SLEEP       = { 1:'😴 Плохо', 2:'💤 Нормально', 3:'✨ Хорошо' }
 const PAIN        = { 1:'✅ Нет', 2:'⚠️ Немного', 3:'🛑 Есть' }
 const STRESS      = { 1:'✅ Нет', 2:'😐 Умеренный', 3:'😰 Сильный' }
 const COMPLETION  = { done:'Выполнено', partial:'Частично', skipped:'Пропущено' }
 const VERSION_LABELS = { base:'Base', light:'Light', recovery:'Recovery', rest:'Отдых' }
-const DAY_TYPE    = { run:'🏃 Бег', strength:'💪 Силовая', recovery:'🔄 Восстановление', rest:'😴 Отдых' }
+const DAY_TYPE    = { run:'🏃 Бег', strength:'💪 Силовая', recovery:'🔄 Восстановление', rest:'😴 Отдых', mobility:'🧘 Мобильность' }
 const GENDER      = { m:'Мужской', f:'Женский' }
 const GOAL        = {
   start_zero:'Начать с нуля', return:'Вернуться после перерыва',
   distance:'Пробежать дистанцию', improve:'Улучшить результат',
   no_pain:'Бегать без боли', health:'Общее здоровье и форма',
+  race:'Пробежать забег',
 }
 const RUNS        = { no:'Нет', irregular:'Нерегулярно', regular:'Регулярно' }
 const FREQUENCY   = { '0_1':'0–1 р/нед', '2_3':'2–3 р/нед', '4plus':'4+ р/нед' }
 const VOLUME      = { to_10:'до 10 км', '10_25':'10–25 км', '25_50':'25–50 км', '50plus':'50+ км' }
-const LONGEST     = { to_5:'до 5 км', '5_10':'5–10 км', '10_15':'10–15 км', '15plus':'15+ км' }
+const LONGEST     = { '0':'Не бегаю', to_5:'до 5 км', '5_10':'5–10 км', '5_15':'5–15 км', '10_15':'10–15 км', '15_30':'15–30 мин', '30_60':'30–60 мин', '60plus':'60+ мин', '15plus':'15+ км' }
 const EXPERIENCE  = { beginner:'Только начинаю', to_6m:'до 6 мес', '6_12m':'6–12 мес', '1_3y':'1–3 года', '3plus':'3+ лет' }
 const BREAK_DUR   = { no:'Нет', to_1m:'до 1 мес', '1_3m':'1–3 мес', '3_6m':'3–6 мес', '6plus':'6+ мес' }
 const RUN_FEEL    = { hard:'Тяжело', medium:'Нормально', easy:'Комфортно' }
@@ -33,6 +34,25 @@ const PAIN_LOC    = { knees:'Колени', feet:'Стопы', shin:'Голен�
 const SPORTS      = { gym:'Зал', bike:'Велосипед', swim:'Плавание', other:'Другое', none:'Только бег' }
 const STR_FREQ    = { no:'Не делаю', sometimes:'Иногда', regularly:'Регулярно' }
 const SELF_LEVEL  = { beginner:'Новичок', base:'Базовый', medium:'Средний', advanced:'Продвинутый' }
+const CONT_RUN    = { yes:'Да', no:'Нет', unsure:'Не уверен' }
+const GADGET_TYPES = {
+  whoop: 'Whoop', garmin: 'Garmin', oura: 'Oura',
+  apple_watch: 'Apple Watch', polar: 'Polar', fitbit: 'Fitbit', other: 'Другой'
+}
+const GADGET_SHARING = { yes: 'Да', no: 'Нет', later: 'Позже' }
+const PERIOD_LABELS = {
+  base_in:'Base-In', base:'Base',
+  preparatory:'Preparatory', specialized:'Specialized',
+  recovery_period:'Recovery period',
+}
+const ENTRY_LABELS = { base_in:'Base-In (с нуля)', base:'Base (с базы)' }
+const ABSENCE_REASON = { tired:'Устал', sick:'Болен', no_time:'Нет времени', motivation:'Нет мотивации', weather:'Погода', other:'Другое' }
+const DOW = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']
+const RUN_SUBTYPE = {
+  easy:'Лёгкий', aerobic:'Аэробный', recovery_run:'Восстановит.',
+  long:'Длительный', run_walk:'Шаг-бег', tempo:'Темповый',
+  intervals:'Интервалы', interval:'Интервальный', fartlek:'Фартлек', race:'Гонка',
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function formatDate(d) {
@@ -61,7 +81,7 @@ function InfoRow({ label, value }) {
   return (
     <div className="flex items-start py-2 border-b border-gray-100 last:border-0">
       <span className="text-sm text-gray-500 w-44 shrink-0">{label}</span>
-      <span className="text-sm text-gray-900">{value || '—'}</span>
+      <span className="text-sm text-gray-900">{value ?? '—'}</span>
     </div>
   )
 }
@@ -90,7 +110,7 @@ function BtnSecondary({ children, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors"
+      className="bg-white text-gray-700 border border-gray-200 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
     >
       {children}
     </button>
@@ -103,6 +123,9 @@ function ProfileTab({ user }) {
   const tz = user.timezone_offset != null
     ? `UTC${user.timezone_offset >= 0 ? '+' : ''}${user.timezone_offset}`
     : null
+
+  const hasNewLogicState = user.entry_point || user.current_period ||
+    user.injury_return_active || user.red_flag_active || user.weekly_target_minutes
 
   return (
     <div className="flex flex-col gap-6">
@@ -130,19 +153,24 @@ function ProfileTab({ user }) {
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Программа</h3>
           <div className="flex items-start py-2 border-b border-gray-100">
             <span className="text-sm text-gray-500 w-44 shrink-0">Уровень</span>
-            {user.level ? <Badge value="default" label={LEVELS[user.level]} /> : <span className="text-sm text-gray-900">—</span>}
+            {user.level ? <Badge value="default" label={`L${user.level} ${LEVELS[user.level] || ''}`} /> : <span className="text-sm text-gray-900">—</span>}
           </div>
           <div className="flex items-start py-2 border-b border-gray-100">
             <span className="text-sm text-gray-500 w-44 shrink-0">Статус</span>
-            {user.status ? <Badge value={user.status} label={STATUS_LABELS[user.status]} /> : <span className="text-sm text-gray-900">—</span>}
+            {user.status ? <Badge value={user.status} label={STATUS_LABELS[user.status] || user.status} /> : <span className="text-sm text-gray-900">—</span>}
           </div>
-          <InfoRow label="Дата старта" value={formatDate(user.program_start_date)} />
-          <InfoRow label="Текущий день" value={
-            user.program_start_date
-              ? `${Math.max(1, Math.floor((Date.now() - new Date(user.program_start_date)) / 86400000) + 1)} / 28`
-              : null
-          } />
-          <InfoRow label="Повторов недели" value={user.week_repeat_count} />
+          {user.current_period ? (
+            <>
+              <InfoRow label="Текущий период" value={PERIOD_LABELS[user.current_period] || user.current_period} />
+              <InfoRow label="Неделя программы" value={user.program_week_number} />
+              <InfoRow label="Объём (план)" value={user.weekly_target_minutes ? `${user.weekly_target_minutes} мин/нед` : null} />
+            </>
+          ) : (
+            <>
+              <InfoRow label="Дата старта" value={formatDate(user.program_start_date)} />
+              <InfoRow label="Повторов недели" value={user.week_repeat_count} />
+            </>
+          )}
           <InfoRow label="Силовые" value={
             user.strength_format === 'gym' ? 'Зал' :
             user.strength_format === 'home' ? 'Дома' : null
@@ -151,19 +179,48 @@ function ProfileTab({ user }) {
         </div>
       </div>
 
+      {/* New logic state */}
+      {hasNewLogicState && (
+        <div className="bg-white border border-violet-200 rounded-xl p-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">🆕 Состояние (new logic)</h3>
+          <div className="grid grid-cols-2 gap-x-10">
+            <div>
+              <InfoRow label="Точка входа" value={ENTRY_LABELS[user.entry_point] || user.entry_point} />
+              <InfoRow label="Текущий период" value={PERIOD_LABELS[user.current_period] || user.current_period} />
+              <InfoRow label="Неделя периода" value={user.period_week_number} />
+              <InfoRow label="Неделя программы" value={user.program_week_number} />
+              <InfoRow label="Цикл №" value={user.cycle_number} />
+              <InfoRow label="Стрик роста" value={user.growth_streak} />
+              <InfoRow label="Нед. без разгрузки" value={user.weeks_since_recovery} />
+            </div>
+            <div>
+              <InfoRow label="Плановый объём" value={user.weekly_target_minutes ? `${user.weekly_target_minutes} мин/нед` : null} />
+              <InfoRow label="Пиковый объём" value={user.peak_volume_minutes ? `${user.peak_volume_minutes} мин/нед` : null} />
+              <InfoRow label="Цель: забег/дистанция" value={user.has_goal_race != null ? (user.has_goal_race ? 'Да' : 'Нет') : null} />
+              <InfoRow label="Режим возврата" value={user.injury_return_active ? '⚠️ Активен' : null} />
+              <InfoRow label="Целевой уровень" value={user.target_level ? `L${user.target_level} ${LEVELS[user.target_level] || ''}` : null} />
+              {user.red_flag_active && (
+                <InfoRow label="Red flag" value={`🚩 ${user.red_flag_reason || 'Активен'}`} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Questionnaire */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-5">Анкета</h3>
         <div className="grid grid-cols-2 gap-x-10">
           <div>
             <SectionTitle>🎯 Цель</SectionTitle>
-            <InfoRow label="Цель" value={GOAL[user.q_goal]} />
+            <InfoRow label="Цель" value={GOAL[user.q_goal] || user.q_goal} />
 
             <SectionTitle>🏃 Бег</SectionTitle>
             <InfoRow label="Бегает" value={RUNS[user.q_runs]} />
             <InfoRow label="Частота" value={FREQUENCY[user.q_frequency]} />
             <InfoRow label="Объём" value={VOLUME[user.q_volume]} />
-            <InfoRow label="Самый длинный бег" value={LONGEST[user.q_longest_run]} />
+            <InfoRow label="Самый длинный бег" value={LONGEST[user.q_longest_run] || user.q_longest_run} />
+            <InfoRow label="Непрерывный бег 20 мин" value={CONT_RUN[user.q_continuous_run_test]} />
             <InfoRow label="Как даётся" value={RUN_FEEL[user.q_run_feel]} />
             <InfoRow label="Структура" value={
               user.q_structure === 'yes' ? 'Есть' :
@@ -179,7 +236,7 @@ function ProfileTab({ user }) {
             <SectionTitle>🦵 Здоровье</SectionTitle>
             <InfoRow label="Боль" value={
               user.q_pain === 'yes' ? 'Есть' :
-              user.q_pain === 'no' ? 'Нет' :
+              user.q_pain === 'no' || user.q_pain === 'none' ? 'Нет' :
               user.q_pain === 'little' ? 'Немного' : null
             } />
             <div className="flex items-start py-2 border-b border-gray-100">
@@ -218,6 +275,37 @@ function ProfileTab({ user }) {
           </div>
         </div>
       </div>
+
+      {/* Gadgets */}
+      {user.q_gadget != null && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Гаджеты и трекеры</h3>
+          <InfoRow label="Использует трекер" value={user.q_gadget === 'yes' ? 'Да' : user.q_gadget === 'no' ? 'Нет' : null} />
+          {user.q_gadget === 'yes' && (
+            <>
+              <div className="flex items-start py-2 border-b border-gray-100">
+                <span className="text-sm text-gray-500 w-44 shrink-0">Устройства</span>
+                <div className="flex flex-wrap">
+                  {parseTags(user.q_gadget_types, GADGET_TYPES).length
+                    ? parseTags(user.q_gadget_types, GADGET_TYPES).map(t => <Tag key={t}>{t}</Tag>)
+                    : <span className="text-sm text-gray-900">—</span>
+                  }
+                </div>
+              </div>
+              <InfoRow label="Шаринг данных" value={GADGET_SHARING[user.q_gadget_sharing]} />
+            </>
+          )}
+          <InfoRow label="Сегмент" value={
+            user.q_gadget === 'no'
+              ? '1 — Без гаджетов'
+              : user.q_gadget === 'yes' && user.q_gadget_sharing === 'yes'
+                ? '3 — Гаджет + данные'
+                : user.q_gadget === 'yes'
+                  ? '2 — Гаджет, без шаринга'
+                  : null
+          } />
+        </div>
+      )}
     </div>
   )
 }
@@ -231,7 +319,7 @@ function SectionTitle({ children }) {
 }
 
 // ─── Progress Tab ─────────────────────────────────────────────────────────────
-function ProgressTab({ logs, onReload }) {
+function ProgressTab({ logs = [], onReload }) {
   const toast = useToast()
   const done    = logs.filter(l => l.completion_status === 'done').length
   const skipped = logs.filter(l => l.completion_status === 'skipped').length
@@ -247,12 +335,13 @@ function ProgressTab({ logs, onReload }) {
   const weekDone   = weekLogs.filter(l => l.completion_status === 'done').length
   const weekPct    = weekLogs.length > 0 ? Math.round(weekDone / weekLogs.length * 100) : 0
 
-  const [openMenu, setOpenMenu]     = useState(null)
-  const [assignModal, setAssignModal] = useState(null)
-  const [statusModal, setStatusModal] = useState(null)
-  const [assignVersion, setAssignVersion] = useState('base')
-  const [newStatus, setNewStatus]   = useState('done')
-  const [saving, setSaving]         = useState(false)
+  const [openMenu, setOpenMenu]             = useState(null)
+  const [assignModal, setAssignModal]       = useState(null)
+  const [statusModal, setStatusModal]       = useState(null)
+  const [resetCheckinModal, setResetCheckinModal] = useState(null)
+  const [assignVersion, setAssignVersion]   = useState('base')
+  const [newStatus, setNewStatus]           = useState('done')
+  const [saving, setSaving]                 = useState(false)
 
   async function saveAssign() {
     setSaving(true)
@@ -276,6 +365,17 @@ function ProgressTab({ logs, onReload }) {
     setSaving(false)
   }
 
+  async function doResetCheckin() {
+    setSaving(true)
+    try {
+      await api.post(`/logs/${resetCheckinModal.id}/reset-checkin`)
+      toast('Чекин сброшен — бот запросит заново')
+      setResetCheckinModal(null)
+      onReload()
+    } catch { toast('Ошибка сброса', 'error') }
+    setSaving(false)
+  }
+
   return (
     <div>
       <div className="grid grid-cols-4 gap-4 mb-6">
@@ -292,7 +392,7 @@ function ProgressTab({ logs, onReload }) {
         ))}
       </div>
 
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+      <div className="bg-white border border-gray-200 rounded-xl">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
@@ -312,9 +412,11 @@ function ProgressTab({ logs, onReload }) {
                     <td className="px-3 py-2.5 text-gray-700">{formatDate(log.date)}</td>
                     <td className="px-3 py-2.5 text-gray-700">{log.workout ? DAY_TYPE[log.workout.day_type] : '—'}</td>
                     <td className="px-3 py-2.5">
-                      {log.assigned_version
-                        ? <Badge value={log.assigned_version} label={VERSION_LABELS[log.assigned_version]} />
-                        : '—'}
+                      {log.coach_override
+                        ? <span className="text-xs text-orange-600 font-medium">✏️ Override</span>
+                        : log.assigned_version
+                          ? <Badge value={log.assigned_version} label={VERSION_LABELS[log.assigned_version]} />
+                          : '—'}
                     </td>
                     <td className="px-3 py-2.5">{log.wellbeing ? WELLBEING[log.wellbeing]?.split(' ')[0] : '—'}</td>
                     <td className="px-3 py-2.5">{log.sleep_quality ? SLEEP[log.sleep_quality]?.split(' ')[0] : '—'}</td>
@@ -353,6 +455,12 @@ function ProgressTab({ logs, onReload }) {
                           >
                             Изменить статус
                           </button>
+                          <button
+                            className="w-full text-left px-4 py-2 text-sm text-orange-600 hover:bg-orange-50"
+                            onClick={() => { setResetCheckinModal(log); setOpenMenu(null) }}
+                          >
+                            Сбросить чекин
+                          </button>
                         </div>
                       )}
                     </td>
@@ -364,7 +472,6 @@ function ProgressTab({ logs, onReload }) {
         </table>
       </div>
 
-      {/* Assign modal */}
       <Modal
         isOpen={!!assignModal}
         onClose={() => setAssignModal(null)}
@@ -382,7 +489,6 @@ function ProgressTab({ logs, onReload }) {
         </div>
       </Modal>
 
-      {/* Status modal */}
       <Modal
         isOpen={!!statusModal}
         onClose={() => setStatusModal(null)}
@@ -398,21 +504,201 @@ function ProgressTab({ logs, onReload }) {
           ))}
         </div>
       </Modal>
+
+      <Modal
+        isOpen={!!resetCheckinModal}
+        onClose={() => setResetCheckinModal(null)}
+        title={`Сбросить чекин — день ${resetCheckinModal?.calendar_day ?? resetCheckinModal?.day_index ?? '?'}`}
+        footer={<><BtnSecondary onClick={() => setResetCheckinModal(null)}>Отмена</BtnSecondary><button onClick={doResetCheckin} disabled={saving} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-60">Сбросить</button></>}
+      >
+        <p className="text-sm text-gray-600">
+          Данные утреннего чек-ина (самочувствие, сон, боль, стресс) будут очищены.
+          Бот запросит чек-ин заново когда пользователь откроет приложение.
+        </p>
+      </Modal>
     </div>
   )
 }
 
-// ─── Testing Tab ─────────────────────────────────────────────────────────────
-function TestingTab({ userId, onReload }) {
+// ─── Week Plan Tab ────────────────────────────────────────────────────────────
+function WeekPlanTab({ userId }) {
   const toast = useToast()
-  const [targetDay, setTargetDay]       = useState(1)
-  const [deleteFromDay, setDeleteFromDay] = useState(1)
-  const [saving, setSaving]             = useState(false)
+  const [plans, setPlans]           = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [generating, setGenerating] = useState(false)
+  const [acting, setActing]         = useState(null)   // week_plan_id being acted on
+  const [confirmDelete, setConfirm] = useState(null)   // wp to delete
 
-  const [setDayModal, setSetDayModal]         = useState(false)
-  const [deleteLogsModal, setDeleteLogsModal] = useState(false)
-  const [resetModal, setResetModal]           = useState(false)
-  const [onboardingModal, setOnboardingModal] = useState(false)
+  function load() {
+    setLoading(true)
+    api.get(`/users/${userId}/week-plans`)
+      .then(r => setPlans(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [userId])
+
+  async function generateWeek() {
+    setGenerating(true)
+    try {
+      await api.post(`/users/${userId}/generate-week`)
+      toast('План недели создан')
+      load()
+    } catch { toast('Ошибка создания плана', 'error') }
+    setGenerating(false)
+  }
+
+
+  async function handleDelete(wp) {
+    setActing(wp.id)
+    try {
+      await api.delete(`/users/week-plans/${wp.id}`)
+      toast('Неделя удалена')
+      setConfirm(null)
+      load()
+    } catch { toast('Ошибка удаления', 'error') }
+    setActing(null)
+  }
+
+  async function handleRecalculate(wp) {
+    setActing(wp.id)
+    try {
+      await api.post(`/users/week-plans/${wp.id}/recalculate`)
+      toast('Неделя пересчитана')
+      load()
+    } catch { toast('Ошибка пересчёта', 'error') }
+    setActing(null)
+  }
+
+  if (loading) return (
+    <div className="flex justify-center py-12">
+      <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
+
+  return (
+    <>
+      <div className="flex flex-col gap-4">
+        <div className="flex justify-end">
+          <BtnPrimary onClick={generateWeek} disabled={generating}>
+            {generating ? 'Создаём...' : '+ Создать план недели'}
+          </BtnPrimary>
+        </div>
+        {plans.length === 0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-10 text-center text-gray-400 text-sm">
+            Нет недельных планов
+          </div>
+        ) : (
+          plans.map(wp => (
+            <div key={wp.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3 flex-wrap">
+                <span className="font-semibold text-gray-900">Неделя {wp.week_number}</span>
+                {wp.cycle_number && <span className="text-xs text-gray-400">Цикл {wp.cycle_number}</span>}
+                <span className="text-sm text-gray-600">{PERIOD_LABELS[wp.period] || wp.period}</span>
+                {wp.start_date && (
+                  <span className="text-sm text-gray-500">{formatDate(wp.start_date)} – {formatDate(wp.end_date)}</span>
+                )}
+                <span className="text-sm font-medium text-gray-700">{wp.weekly_target_minutes} мин/нед</span>
+                {wp.is_recovery_week && (
+                  <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">Разгрузка</span>
+                )}
+                {wp.completion_rate != null && (
+                  <span className="text-xs text-gray-500">{Math.round(wp.completion_rate * 100)}%</span>
+                )}
+                {wp.closed_at && (
+                  <span className="text-xs text-gray-400">Закрыта {formatDate(wp.closed_at)}</span>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <button
+                    onClick={() => handleRecalculate(wp)}
+                    disabled={acting === wp.id}
+                    className="text-xs px-3 py-1 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 transition-colors"
+                  >
+                    {acting === wp.id ? '...' : 'Пересчитать'}
+                  </button>
+                  <button
+                    onClick={() => setConfirm(wp)}
+                    disabled={acting === wp.id}
+                    className="text-xs px-3 py-1 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              </div>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    {['День','Тип','Подтип','Минуты','Интенс.','Ключевая'].map(h => (
+                      <th key={h} className="px-4 py-2 text-left text-xs text-gray-400 font-medium">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {wp.days.map(d => (
+                    <tr key={d.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium text-gray-700">{DOW[d.day_of_week - 1] ?? d.day_of_week}</td>
+                      <td className="px-4 py-2 text-gray-700">{DAY_TYPE[d.day_type] || d.day_type || '—'}</td>
+                      <td className="px-4 py-2 text-gray-500">{RUN_SUBTYPE[d.run_subtype] || d.run_subtype || '—'}</td>
+                      <td className="px-4 py-2 text-gray-700">{d.planned_minutes ? `${d.planned_minutes} мин` : '—'}</td>
+                      <td className="px-4 py-2 text-gray-500">{d.intensity ?? '—'}</td>
+                      <td className="px-4 py-2">{d.is_key ? '⭐' : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))
+        )}
+      </div>
+
+      {confirmDelete && (
+        <Modal
+          isOpen
+          onClose={() => setConfirm(null)}
+          title="Удалить неделю?"
+          footer={
+            <>
+              <button onClick={() => setConfirm(null)} className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">
+                Отмена
+              </button>
+              <button
+                onClick={() => handleDelete(confirmDelete)}
+                disabled={acting === confirmDelete.id}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-60"
+              >
+                Удалить
+              </button>
+            </>
+          }
+        >
+          <p className="text-sm text-gray-700">
+            Неделя {confirmDelete.week_number} · {PERIOD_LABELS[confirmDelete.period] || confirmDelete.period} · {formatDate(confirmDelete.start_date)} – {formatDate(confirmDelete.end_date)}
+          </p>
+          <p className="text-xs text-gray-400 mt-2">DayPlan'ы будут удалены. Чекины сохранятся.</p>
+        </Modal>
+      )}
+    </>
+  )
+}
+
+// ─── Testing Tab ─────────────────────────────────────────────────────────────
+function TestingTab({ userId, logs = [], onReload, isNewLogic }) {
+  const toast = useToast()
+  const [targetDay, setTargetDay]             = useState(1)
+  const [deleteFromDay, setDeleteFromDay]     = useState(1)
+  const [resetCheckinDay, setResetCheckinDay] = useState(1)
+  const [shiftDays, setShiftDays]             = useState(-7)
+  const [saving, setSaving]                   = useState(false)
+  const [calcResult, setCalcResult]           = useState(null)
+  const [calcLoading, setCalcLoading]         = useState(false)
+
+  const [setDayModal, setSetDayModal]               = useState(false)
+  const [deleteLogsModal, setDeleteLogsModal]       = useState(false)
+  const [resetModal, setResetModal]                 = useState(false)
+  const [onboardingModal, setOnboardingModal]       = useState(false)
+  const [calcModal, setCalcModal]                   = useState(false)
+  const [resetCheckinModal, setResetCheckinModal]   = useState(false)
 
   async function doSetDay() {
     setSaving(true)
@@ -458,6 +744,56 @@ function TestingTab({ userId, onReload }) {
     setSaving(false)
   }
 
+  async function openCalcModal() {
+    setCalcResult(null)
+    setCalcLoading(true)
+    setCalcModal(true)
+    try {
+      const res = await api.get(`/users/${userId}/calc-level`)
+      setCalcResult(res.data)
+    } catch { toast('Ошибка расчёта', 'error'); setCalcModal(false) }
+    setCalcLoading(false)
+  }
+
+  async function doRecalcAndSave() {
+    setSaving(true)
+    try {
+      const res = await api.post(`/users/${userId}/recalc-level`)
+      setCalcResult(res.data)
+      toast(`Уровень L${res.data.level} сохранён`)
+      setCalcModal(false)
+      onReload()
+    } catch { toast('Ошибка сохранения', 'error') }
+    setSaving(false)
+  }
+
+  async function doResetCheckinByDay() {
+    const log = logs.find(l => (l.calendar_day ?? l.day_index) === resetCheckinDay)
+    if (!log) {
+      toast(`Лог для дня ${resetCheckinDay} не найден`, 'error')
+      setResetCheckinModal(false)
+      return
+    }
+    setSaving(true)
+    try {
+      await api.post(`/logs/${log.id}/reset-checkin`)
+      toast(`Чекин дня ${resetCheckinDay} сброшен`)
+      setResetCheckinModal(false)
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setSaving(false)
+  }
+
+  async function doShiftWeek() {
+    setSaving(true)
+    try {
+      const res = await api.post(`/users/${userId}/shift-week?days=${shiftDays}`)
+      toast(`WeekPlan сдвинут: ${res.data.new_start} — ${res.data.new_end}`)
+      onReload()
+    } catch { toast('Ошибка сдвига', 'error') }
+    setSaving(false)
+  }
+
   return (
     <div>
       <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3.5 mb-6 flex items-center gap-3">
@@ -466,40 +802,93 @@ function TestingTab({ userId, onReload }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {/* Set day */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
-          <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number" min={1} max={35} value={targetDay}
-              onChange={e => setTargetDay(Math.max(1, Math.min(35, +e.target.value)))}
-              className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
-            <span className="text-sm text-gray-500">из 28</span>
-            <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
-          </div>
+        {/* Recalc level */}
+        <div className="bg-white border border-violet-200 rounded-xl p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Пересчитать уровень</h3>
+          <p className="text-xs text-gray-500 mb-4">Запускает level_assignment.py на текущих ответах анкеты. Показывает скоринг и позволяет применить результат.</p>
+          <BtnPrimary onClick={openCalcModal}>Рассчитать</BtnPrimary>
         </div>
 
-        {/* Delete logs from day */}
+        {/* Reset checkin by day */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
-          <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
+          <h3 className="text-sm font-semibold text-gray-900 mb-1">Сбросить чекин дня X</h3>
+          <p className="text-xs text-gray-500 mb-4">Очищает данные утреннего чек-ина. Бот запросит его заново — пользователь введёт что хочет.</p>
           <div className="flex items-center gap-3">
             <input
-              type="number" min={1} max={35} value={deleteFromDay}
-              onChange={e => setDeleteFromDay(Math.max(1, Math.min(35, +e.target.value)))}
+              type="number" min={1} max={500} value={resetCheckinDay}
+              onChange={e => setResetCheckinDay(Math.max(1, +e.target.value))}
               className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
-            <span className="text-sm text-gray-500">и далее</span>
             <button
-              onClick={() => setDeleteLogsModal(true)}
+              onClick={() => setResetCheckinModal(true)}
               className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
             >
-              Удалить
+              Сбросить
             </button>
           </div>
         </div>
+
+        {/* Set day — old logic only */}
+        {!isNewLogic && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Перейти на день X</h3>
+            <p className="text-xs text-gray-500 mb-4">Меняет дату старта так, чтобы сегодня был выбранный день программы. Логи не затрагиваются.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={1} max={35} value={targetDay}
+                onChange={e => setTargetDay(Math.max(1, Math.min(35, +e.target.value)))}
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">из 28</span>
+              <BtnPrimary onClick={() => setSetDayModal(true)}>Применить</BtnPrimary>
+            </div>
+          </div>
+        )}
+
+        {/* Shift week — new logic only */}
+        {isNewLogic && (
+          <div className="bg-white border border-blue-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Сдвинуть неделю (новая система)</h3>
+            <p className="text-xs text-gray-500 mb-4">Сдвигает даты WeekPlan назад/вперёд. Удобно чтобы «сегодня» оказался внутри плана для тестирования.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={-60} max={60} value={shiftDays}
+                onChange={e => setShiftDays(+e.target.value)}
+                className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">дней</span>
+              <button
+                onClick={doShiftWeek}
+                disabled={saving}
+                className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-60"
+              >
+                Сдвинуть
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Delete logs from day — old logic only */}
+        {!isNewLogic && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-1">Удалить логи с дня X</h3>
+            <p className="text-xs text-gray-500 mb-4">Удаляет все session_logs начиная с выбранного дня. Бот увидит пользователя как будто этих дней не было.</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number" min={1} max={35} value={deleteFromDay}
+                onChange={e => setDeleteFromDay(Math.max(1, Math.min(35, +e.target.value)))}
+                className="w-20 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+              <span className="text-sm text-gray-500">и далее</span>
+              <button
+                onClick={() => setDeleteLogsModal(true)}
+                className="bg-orange-100 text-orange-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+              >
+                Удалить
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Full reset */}
         <div className="bg-white border border-red-100 rounded-xl p-5">
@@ -525,6 +914,86 @@ function TestingTab({ userId, onReload }) {
           </button>
         </div>
       </div>
+
+      {/* Calc level modal */}
+      <Modal
+        isOpen={calcModal}
+        onClose={() => setCalcModal(false)}
+        title="Расчёт уровня по анкете"
+        footer={
+          <>
+            <BtnSecondary onClick={() => setCalcModal(false)}>Закрыть</BtnSecondary>
+            {calcResult && <BtnPrimary onClick={doRecalcAndSave} disabled={saving}>Применить и сохранить</BtnPrimary>}
+          </>
+        }
+      >
+        {calcLoading && (
+          <div className="flex justify-center py-8">
+            <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+        {calcResult && !calcLoading && (
+          <div className="flex flex-col gap-4">
+            {calcResult.hard_stop && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+                🛑 Hard stop: {calcResult.hard_stop}
+              </div>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-violet-50 border border-violet-200 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-violet-700">L{calcResult.level}</div>
+                <div className="text-sm text-violet-500 mt-1">{LEVELS[calcResult.level] || ''}</div>
+              </div>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col gap-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-gray-500">Точка входа</span><span className="font-medium">{ENTRY_LABELS[calcResult.entry_point] || calcResult.entry_point}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Нач. период</span><span className="font-medium">{PERIOD_LABELS[calcResult.initial_period] || calcResult.initial_period}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Стартовый объём</span><span className="font-medium">{calcResult.starting_volume_min} мин/нед</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Возврат</span><span className="font-medium">{calcResult.injury_return ? 'Да' : 'Нет'}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Цель: забег</span><span className="font-medium">{calcResult.has_goal_race ? 'Да' : 'Нет'}</span></div>
+              </div>
+            </div>
+            {calcResult.score_breakdown && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Разбор скоринга</p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden text-sm">
+                  {[
+                    ['Базовый (бегает)', calcResult.score_breakdown.base],
+                    ['Частота', calcResult.score_breakdown.frequency],
+                    ['Объём', calcResult.score_breakdown.volume],
+                    ['Структура', calcResult.score_breakdown.structure],
+                    ['Перерыв', calcResult.score_breakdown.break_penalty],
+                    ['Боль', calcResult.score_breakdown.pain_penalty],
+                  ].map(([label, val]) => (
+                    <div key={label} className="flex justify-between px-4 py-2 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-600">{label}</span>
+                      <span className={`font-medium ${val < 0 ? 'text-red-500' : val > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                        {val > 0 ? `+${val}` : val}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between px-4 py-2 bg-gray-50 font-semibold">
+                    <span>Итого → L{calcResult.level}</span>
+                    <span>{calcResult.score_breakdown.total}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Reset checkin by day modal */}
+      <Modal
+        isOpen={resetCheckinModal}
+        onClose={() => setResetCheckinModal(false)}
+        title={`Сбросить чекин дня ${resetCheckinDay}?`}
+        footer={<><BtnSecondary onClick={() => setResetCheckinModal(false)}>Отмена</BtnSecondary><button onClick={doResetCheckinByDay} disabled={saving} className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors disabled:opacity-60">Сбросить</button></>}
+      >
+        <p className="text-sm text-gray-600">
+          Данные утреннего чек-ина дня <b>{resetCheckinDay}</b> будут очищены.
+          Когда пользователь откроет бот, он сможет пройти чек-ин заново с любыми значениями.
+        </p>
+      </Modal>
 
       <Modal
         isOpen={setDayModal} onClose={() => setSetDayModal(false)}
@@ -562,7 +1031,7 @@ function TestingTab({ userId, onReload }) {
 }
 
 // ─── Checkins Tab ─────────────────────────────────────────────────────────────
-function CheckinsTab({ logs }) {
+function CheckinsTab({ logs = [] }) {
   const [open, setOpen] = useState(null)
 
   return (
@@ -604,11 +1073,17 @@ function CheckinsTab({ logs }) {
                   <InfoRow label="Стресс" value={STRESS[log.stress_level]} />
                   <InfoRow label="Red flag" value={log.red_flag ? '🚩 Да' : null} />
                   <InfoRow label="Накопл. усталость" value={log.fatigue_reduction ? '⚠️ Да' : null} />
+                  {log.recheckin_count > 0 && <InfoRow label="Повторных чекинов" value={log.recheckin_count} />}
+                  {log.absence_reason && <InfoRow label="Причина пропуска" value={ABSENCE_REASON[log.absence_reason] || log.absence_reason} />}
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Тренировка и вечер</p>
+                  {log.coach_override && (
+                    <div className="mb-2 text-xs text-orange-600 font-medium bg-orange-50 rounded px-2 py-1">✏️ Coach override</div>
+                  )}
                   <InfoRow label="Назначена версия" value={VERSION_LABELS[log.assigned_version]} />
                   <InfoRow label="Workout ID" value={log.assigned_workout_id ? `#${log.assigned_workout_id}` : null} />
+                  {log.planned_minutes && <InfoRow label="Плановые минуты" value={`${log.planned_minutes} мин`} />}
                   <div className="border-b border-gray-200 my-2" />
                   <InfoRow label="Статус" value={COMPLETION[log.completion_status]} />
                   <InfoRow label="Усилие" value={log.effort_level ? `${log.effort_level} / 5` : null} />
@@ -624,23 +1099,170 @@ function CheckinsTab({ logs }) {
   )
 }
 
+// ─── Payments Tab ─────────────────────────────────────────────────────────────
+const PLAN_LABELS = { monthly: 'Месяц', annual: 'Год' }
+const SUB_LABELS  = { trial: 'Триал', monthly: 'Месяц', annual: 'Год', ambassador: 'Амбассадор', free: 'Бесплатно', expired: 'Истёк' }
+const STATUS_PAY  = { pending: ['Ожидает', 'yellow'], succeeded: ['Оплачен', 'green'], canceled: ['Отменён', 'red'] }
+
+function PaymentsTab({ userId, user, onReload }) {
+  const toast = useToast()
+  const [payments, setPayments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [days, setDays] = useState('')
+  const [acting, setActing] = useState(false)
+
+  useEffect(() => {
+    api.get(`/payments/user/${userId}`)
+      .then(r => setPayments(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [userId])
+
+  async function addDays() {
+    const n = parseInt(days)
+    if (!n || n < 1) return
+    setActing(true)
+    try {
+      await api.post(`/payments/user/${userId}/add-days`, { days: n })
+      toast(`Добавлено ${n} дней`)
+      setDays('')
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setActing(false)
+  }
+
+  async function setAmbassador() {
+    setActing(true)
+    try {
+      await api.post(`/payments/user/${userId}/set-ambassador`)
+      toast('Статус амбассадора установлен')
+      onReload()
+    } catch { toast('Ошибка', 'error') }
+    setActing(false)
+  }
+
+  const subType = user?.subscription_type || '—'
+  const accessUntil = user?.access_until ? user.access_until.split('T')[0].split('-').reverse().join('.') : '—'
+  const trialStarted = user?.trial_started_at ? user.trial_started_at.split('T')[0].split('-').reverse().join('.') : '—'
+
+  return (
+    <div className="space-y-6">
+      {/* Current access */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Доступ</h3>
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="text-gray-500 mb-1">Тип подписки</div>
+            <div className="font-medium">{SUB_LABELS[subType] || subType}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Доступ до</div>
+            <div className="font-medium">{subType === 'ambassador' ? '∞' : accessUntil}</div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">Триал начат</div>
+            <div className="font-medium">{trialStarted}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin controls */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Управление доступом</h3>
+        <div className="flex gap-3 flex-wrap">
+          <div className="flex gap-2 items-center">
+            <input
+              type="number"
+              min="1"
+              max="365"
+              value={days}
+              onChange={e => setDays(e.target.value)}
+              placeholder="Дней"
+              className="w-24 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <button
+              onClick={addDays}
+              disabled={acting || !days}
+              className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-violet-700 disabled:opacity-50 transition-colors"
+            >
+              Добавить дни
+            </button>
+          </div>
+          <button
+            onClick={setAmbassador}
+            disabled={acting || subType === 'ambassador'}
+            className="bg-amber-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
+          >
+            🎁 Амбассадор
+          </button>
+        </div>
+      </div>
+
+      {/* Payment history */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-100">
+          <h3 className="text-sm font-semibold text-gray-900">История платежей</h3>
+        </div>
+        {loading ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Загрузка…</div>
+        ) : payments.length === 0 ? (
+          <div className="px-5 py-8 text-center text-gray-400 text-sm">Платежей нет</div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-xs text-gray-500 uppercase tracking-wider">
+                <th className="px-5 py-3 text-left">Дата</th>
+                <th className="px-5 py-3 text-left">План</th>
+                <th className="px-5 py-3 text-left">Сумма</th>
+                <th className="px-5 py-3 text-left">Статус</th>
+                <th className="px-5 py-3 text-left">Подтверждён</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map(p => {
+                const [label, color] = STATUS_PAY[p.status] || [p.status, 'gray']
+                const colorMap = { green: 'bg-green-100 text-green-700', yellow: 'bg-yellow-100 text-yellow-700', red: 'bg-red-100 text-red-700', gray: 'bg-gray-100 text-gray-500' }
+                return (
+                  <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-5 py-3 text-gray-600">{p.created_at ? p.created_at.split('T')[0].split('-').reverse().join('.') : '—'}</td>
+                    <td className="px-5 py-3">{PLAN_LABELS[p.plan_type] || p.plan_type}</td>
+                    <td className="px-5 py-3 font-medium">{p.amount} ₽</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${colorMap[color]}`}>{label}</span>
+                    </td>
+                    <td className="px-5 py-3 text-gray-600">{p.confirmed_at ? p.confirmed_at.split('T')[0].split('-').reverse().join('.') : '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function UserDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const toast = useToast()
 
-  const [user, setUser]     = useState(null)
-  const [logs, setLogs]     = useState([])
+  const [user, setUser]       = useState(null)
+  const [logs, setLogs]       = useState([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab]       = useState('profile')
+  const [tab, setTab]         = useState('profile')
 
-  const [levelModal, setLevelModal]   = useState(false)
-  const [startModal, setStartModal]   = useState(false)
-  const [pauseModal, setPauseModal]   = useState(false)
-  const [newLevel, setNewLevel]       = useState(1)
-  const [newStartDate, setNewStartDate] = useState('')
-  const [saving, setSaving]           = useState(false)
+  const [levelModal, setLevelModal]         = useState(false)
+  const [startModal, setStartModal]         = useState(false)
+  const [pauseModal, setPauseModal]         = useState(false)
+  const [activateDateModal, setActivateDateModal] = useState(false)
+  const [activateCustomDate, setActivateCustomDate] = useState('')
+  const [deleteUserModal, setDeleteUserModal] = useState(false)
+  const [deleteUserConfirm, setDeleteUserConfirm] = useState('')
+  const [newLevel, setNewLevel]             = useState(1)
+  const [newStartDate, setNewStartDate]     = useState('')
+  const [saving, setSaving]                 = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -650,7 +1272,7 @@ export default function UserDetail() {
         api.get(`/users/${id}/logs`),
       ])
       setUser(uRes.data)
-      setLogs(lRes.data)
+      setLogs(Array.isArray(lRes.data) ? lRes.data : [])
       setNewLevel(uRes.data.level || 1)
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
@@ -692,6 +1314,39 @@ export default function UserDetail() {
     setSaving(false)
   }
 
+  async function activateUser(startToday) {
+    setSaving(true)
+    try {
+      await api.post(`/users/${id}/activate?start_today=${startToday}`)
+      toast(startToday ? 'Активирован, план создан' : 'Активирован, старт завтра')
+      load()
+    } catch { toast('Ошибка активации', 'error') }
+    setSaving(false)
+  }
+
+  async function activateUserOnDate() {
+    if (!activateCustomDate) return
+    setSaving(true)
+    try {
+      await api.post(`/users/${id}/activate?start_today=false&start_date_override=${activateCustomDate}`)
+      toast(`Активирован, старт ${activateCustomDate}`)
+      setActivateDateModal(false)
+      load()
+    } catch { toast('Ошибка активации', 'error') }
+    setSaving(false)
+  }
+
+  async function doDeleteUser() {
+    if (deleteUserConfirm !== displayName) return
+    setSaving(true)
+    try {
+      await api.delete(`/users/${id}`)
+      toast('Пользователь удалён')
+      navigate('/users')
+    } catch { toast('Ошибка удаления', 'error') }
+    setSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
@@ -708,6 +1363,16 @@ export default function UserDetail() {
     || [user.last_name, user.first_name].filter(Boolean).join(' ')
     || `ID ${user.telegram_id}`
   const initials = displayName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const isNewLogic = !!user.current_period
+
+  const tabs = [
+    ['profile', 'Профиль'],
+    ['progress', 'Прогресс'],
+    ['checkins', 'Чекины'],
+    ...(isNewLogic ? [['weeks', 'Недели']] : []),
+    ['payments', '💳 Платежи'],
+    ['testing', '🧪 Тест'],
+  ]
 
   return (
     <div>
@@ -727,30 +1392,63 @@ export default function UserDetail() {
           <div>
             <h1 className="text-xl font-semibold text-gray-900">{displayName}</h1>
             <div className="flex items-center gap-2 mt-1.5">
-              {user.level && <Badge value="default" label={LEVELS[user.level]} />}
-              {user.status && <Badge value={user.status} label={STATUS_LABELS[user.status]} />}
+              {user.level && <Badge value="default" label={`L${user.level} ${LEVELS[user.level] || ''}`} />}
+              {user.status && <Badge value={user.status} label={STATUS_LABELS[user.status] || user.status} />}
+              {user.entry_point && <Badge value="default" label={ENTRY_LABELS[user.entry_point] || user.entry_point} />}
             </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
-          <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>
           <button
-            onClick={() => setPauseModal(true)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              user.status === 'active'
-                ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
+            onClick={() => { setDeleteUserConfirm(''); setDeleteUserModal(true) }}
+            className="px-4 py-2 rounded-lg text-sm font-medium text-red-600 border border-red-200 hover:bg-red-50 transition-colors"
           >
-            {user.status === 'active' ? 'Пауза' : 'Возобновить'}
+            Удалить
           </button>
+          <BtnSecondary onClick={() => setLevelModal(true)}>Изменить уровень</BtnSecondary>
+          {!user.current_period && <BtnSecondary onClick={() => setStartModal(true)}>Назначить старт</BtnSecondary>}
+          {user.status === 'pending' && user.current_period ? (
+            <>
+              <button
+                onClick={() => activateUser(true)}
+                disabled={saving}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-60"
+              >
+                Активировать сегодня
+              </button>
+              <button
+                onClick={() => activateUser(false)}
+                disabled={saving}
+                className="bg-green-100 text-green-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors disabled:opacity-60"
+              >
+                Старт завтра
+              </button>
+              <button
+                onClick={() => { setActivateCustomDate(''); setActivateDateModal(true) }}
+                disabled={saving}
+                className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors disabled:opacity-60"
+              >
+                На дату...
+              </button>
+            </>
+          ) : user.status !== 'pending' && (
+            <button
+              onClick={() => setPauseModal(true)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                user.status === 'active'
+                  ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                  : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
+            >
+              {user.status === 'active' ? 'Пауза' : 'Возобновить'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-0 mb-6 border-b border-gray-200">
-        {[['profile','Профиль'],['progress','Прогресс'],['checkins','Чекины'],['testing','🧪 Тест']].map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -765,10 +1463,12 @@ export default function UserDetail() {
         ))}
       </div>
 
-      {tab === 'profile'   && <ProfileTab user={user} />}
-      {tab === 'progress'  && <ProgressTab logs={logs} onReload={load} />}
-      {tab === 'checkins'  && <CheckinsTab logs={logs} />}
-      {tab === 'testing'   && <TestingTab userId={id} onReload={load} />}
+      {tab === 'profile'  && <ProfileTab user={user} />}
+      {tab === 'progress' && <ProgressTab logs={logs} onReload={load} />}
+      {tab === 'checkins' && <CheckinsTab logs={logs} />}
+      {tab === 'weeks'    && <WeekPlanTab userId={id} />}
+      {tab === 'payments' && <PaymentsTab userId={id} user={user} onReload={load} />}
+      {tab === 'testing'  && <TestingTab userId={id} logs={logs} onReload={load} isNewLogic={isNewLogic} />}
 
       {/* Level modal */}
       <Modal
@@ -781,7 +1481,7 @@ export default function UserDetail() {
           {Object.entries(LEVELS).map(([k, v]) => (
             <label key={k} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${newLevel === +k ? 'border-violet-300 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'}`}>
               <input type="radio" name="lvl" value={k} checked={newLevel === +k} onChange={() => setNewLevel(+k)} className="accent-violet-600" />
-              <span className="text-sm font-medium">{k} — {v}</span>
+              <span className="text-sm font-medium">L{k} — {v}</span>
               {user.level === +k && <span className="ml-auto text-xs text-violet-500 font-medium">Текущий</span>}
             </label>
           ))}
@@ -819,6 +1519,57 @@ export default function UserDetail() {
             : `Программа пользователя ${displayName} будет возобновлена.`
           }
         </p>
+      </Modal>
+
+      {/* Activate on specific date modal */}
+      <Modal
+        isOpen={activateDateModal}
+        onClose={() => setActivateDateModal(false)}
+        title="Активировать с конкретной даты"
+        footer={<><BtnSecondary onClick={() => setActivateDateModal(false)}>Отмена</BtnSecondary><BtnPrimary onClick={activateUserOnDate} disabled={saving || !activateCustomDate}>Активировать</BtnPrimary></>}
+      >
+        <p className="text-sm text-gray-500 mb-3">
+          Первая неделя начнётся в ближайший понедельник от выбранной даты.
+        </p>
+        <input
+          type="date"
+          value={activateCustomDate}
+          onChange={e => setActivateCustomDate(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+        />
+      </Modal>
+
+      {/* Delete user modal */}
+      <Modal
+        isOpen={deleteUserModal}
+        onClose={() => setDeleteUserModal(false)}
+        title="Удалить пользователя?"
+        footer={
+          <>
+            <BtnSecondary onClick={() => setDeleteUserModal(false)}>Отмена</BtnSecondary>
+            <button
+              onClick={doDeleteUser}
+              disabled={saving || deleteUserConfirm !== displayName}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-60"
+            >
+              Удалить навсегда
+            </button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-600 mb-4">
+          Будут безвозвратно удалены: пользователь, все чекины, логи, недельные и дневные планы, запись в whitelist.
+        </p>
+        <p className="text-sm text-gray-600 mb-2">
+          Для подтверждения введите имя пользователя: <b>{displayName}</b>
+        </p>
+        <input
+          type="text"
+          value={deleteUserConfirm}
+          onChange={e => setDeleteUserConfirm(e.target.value)}
+          placeholder={displayName}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+        />
       </Modal>
     </div>
   )

@@ -109,6 +109,19 @@ async def list_materials(
     return [_serialize(r) for r in result.scalars().all()]
 
 
+@router.get("/{material_id}")
+async def get_material(
+    material_id: int,
+    db: AsyncSession = Depends(get_db),
+    _: str = Depends(get_current_user),
+):
+    result = await db.execute(select(models.Material).where(models.Material.id == material_id))
+    m = result.scalar_one_or_none()
+    if not m:
+        raise HTTPException(status_code=404, detail="Материал не найден")
+    return _serialize(m)
+
+
 @router.post("/upload")
 async def upload_material(
     file: UploadFile = File(...),
@@ -156,19 +169,6 @@ async def upload_material(
     return _serialize(m)
 
 
-@router.get("/{material_id}")
-async def get_material(
-    material_id: int,
-    db: AsyncSession = Depends(get_db),
-    _: str = Depends(get_current_user),
-):
-    result = await db.execute(select(models.Material).where(models.Material.id == material_id))
-    m = result.scalar_one_or_none()
-    if not m:
-        raise HTTPException(status_code=404, detail="Материал не найден")
-    return _serialize(m)
-
-
 @router.put("/{material_id}")
 async def update_material(
     material_id: int,
@@ -204,10 +204,9 @@ async def delete_material(
     return {"ok": True}
 
 
-# ── Material purchase (bot-internal endpoints) ─────────────────────────────────────────────
+# ── Material purchase (bot-internal endpoints) ─────────────────────────────────
 
 from pydantic import BaseModel
-
 
 class PurchaseRequest(BaseModel):
     user_id: int
@@ -299,6 +298,7 @@ async def get_material_purchase_status(
 
 @router.post("/purchase/webhook")
 async def material_purchase_webhook(request: Request, db: AsyncSession = Depends(get_db)):
+    """YooKassa webhook for material purchases."""
     body = await request.json()
     if body.get("event") != "payment.succeeded":
         return {"ok": True}

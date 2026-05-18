@@ -56,18 +56,21 @@ class User(Base):
     q_regularity            = Column(String(20))
     q_strength              = Column(String(20))
     q_self_level            = Column(String(20))
-    q_continuous_run_test   = Column(String(10))
-    q_gadget                = Column(String(10))
-    q_gadget_types          = Column(String(200))
-    q_gadget_sharing        = Column(String(10))
+    q_continuous_run_test   = Column(String(10))   # yes/no/unsure (new v2)
+    q_gadget                = Column(String(10))    # yes / no
+    q_gadget_types          = Column(String(200))   # whoop,garmin,...
+    q_gadget_sharing        = Column(String(10))    # yes / no / later
 
-    available_weekdays      = Column(String(20))
+    # New: доступные дни и объём
+    available_weekdays      = Column(String(20))   # "1,3,5"
     weekly_target_minutes   = Column(Integer)
     peak_volume_minutes     = Column(Integer)
     last_successful_volume  = Column(Integer)
 
+    # Referral
     referral_code           = Column(String(50))
 
+    # New: период и цикл
     current_period          = Column(String(30))
     period_start_date       = Column(Date)
     period_week_number      = Column(Integer, default=1)
@@ -75,28 +78,35 @@ class User(Base):
     cycle_start_date        = Column(Date)
     program_week_number     = Column(Integer, default=1)
 
+    # New: счётчики прогрессии
     growth_streak           = Column(Integer, default=0)
     weeks_since_recovery    = Column(Integer, default=0)
 
+    # New: red flag
     red_flag_active         = Column(Boolean, default=False)
     red_flag_reason         = Column(String(100))
     red_flag_at             = Column(Date)
 
+    # New: точка входа и цель
     has_goal_race           = Column(Boolean, default=False)
-    entry_point             = Column(String(20))
+    entry_point             = Column(String(20))   # base_in / base
 
+    # New: return-mode
     injury_return_active    = Column(Boolean, default=False)
     target_level            = Column(Integer)
     return_mode_started_at  = Column(Date)
 
+    # New: macrocycle recovery
     in_macrocycle_recovery  = Column(Boolean, default=False)
     macrocycle_recovery_week = Column(Integer, default=0)
     macrocycle_peak_volume  = Column(Integer)
 
+    # New: L1 long stage
     l1_long_independent     = Column(Boolean, default=False)
     l1_no_pain_streak_weeks = Column(Integer, default=0)
     l1_easy_reached_40min   = Column(Boolean, default=False)
 
+    # Payment fields
     trial_started_at         = Column(DateTime(timezone=True))
     access_until             = Column(Date)
     subscription_type        = Column(String(20), default="trial")
@@ -183,6 +193,7 @@ class SessionLog(Base):
     date                 = Column(Date, nullable=False)
     day_index            = Column(Integer, default=0)
 
+    # New: связь с новыми планами
     week_plan_id         = Column(Integer, ForeignKey("week_plans.id"))
     day_plan_id          = Column(Integer, ForeignKey("day_plans.id"))
     day_of_week          = Column(Integer)
@@ -199,6 +210,7 @@ class SessionLog(Base):
     effort_level         = Column(Integer)
     completion_pain      = Column(Boolean)
 
+    # New: coach override
     coach_override               = Column(Boolean, default=False)
     override_version             = Column(String(20))
     override_workout_template_id = Column(Integer, ForeignKey("workout_templates.id"))
@@ -207,10 +219,12 @@ class SessionLog(Base):
     approved_by_admin_id         = Column(BigInteger)
     approved_at                  = Column(DateTime(timezone=True))
 
+    # New: absence-flow
     absence_reason               = Column(String(30))
     absence_reason_text          = Column(Text)
     absence_responded_at         = Column(DateTime(timezone=True))
 
+    # New: re-checkin tracking
     recheckin_count              = Column(Integer, default=0)
     last_checkin_at              = Column(DateTime(timezone=True))
 

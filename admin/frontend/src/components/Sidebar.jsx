@@ -44,6 +44,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="px-3 mt-4 flex flex-col gap-1 flex-1">
+        {/* Pending users (onboarding done, awaiting decision) */}
         <NavLink to="/pending" className={navClass}>
           <Clock size={17} />
           <span className="flex-1">Заявки</span>
@@ -54,6 +55,7 @@ export default function Sidebar() {
           )}
         </NavLink>
 
+        {/* Checkin approvals */}
         <NavLink to="/approvals" className={navClass}>
           <CheckSquare size={17} />
           <span className="flex-1">Чек-ины</span>

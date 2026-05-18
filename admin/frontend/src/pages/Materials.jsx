@@ -56,6 +56,7 @@ function UploadModal({ onClose, onSaved }) {
   return (
     <Modal isOpen onClose={onClose} title="Загрузить материал">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* File picker */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Файл *</label>
           <div
@@ -310,6 +311,7 @@ export default function Materials() {
         </div>
       </div>
 
+      {/* Filter tabs */}
       <div className="flex gap-2 mb-5">
         {[
           { value: 'all', label: 'Все' },
@@ -354,7 +356,7 @@ export default function Materials() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(m => (
+              {filtered.map((m, i) => (
                 <tr key={m.id} className={`border-b border-gray-100 hover:bg-gray-50 ${!m.is_active ? 'opacity-50' : ''}`}>
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900">{m.title}</div>
