@@ -6,6 +6,7 @@ import Users from './pages/Users'
 import UserDetail from './pages/UserDetail'
 import Workouts from './pages/Workouts'
 import Analytics from './pages/Analytics'
+import Materials from './pages/Materials'
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('token')
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="users/:id" element={<UserDetail />} />
             <Route path="workouts" element={<Workouts />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="materials" element={<Materials />} />
           </Route>
         </Routes>
       </BrowserRouter>

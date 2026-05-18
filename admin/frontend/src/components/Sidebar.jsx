@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Activity, Users, BarChart2, Dumbbell, LogOut } from 'lucide-react'
+import { Activity, Users, BarChart2, Dumbbell, FolderOpen, LogOut } from 'lucide-react'
 
 const navItems = [
   { to: '/users', icon: Users, label: 'Пользователи' },
   { to: '/analytics', icon: BarChart2, label: 'Аналитика' },
   { to: '/workouts', icon: Dumbbell, label: 'Тренировки' },
+  { to: '/materials', icon: FolderOpen, label: 'Материалы' },
 ]
 
 export default function Sidebar() {
